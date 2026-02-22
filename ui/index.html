@@ -1,813 +1,1423 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SRV AI Outreach — CyberArc MSP</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #080c14;
-    --surface: #0d1420;
-    --surface2: #111927;
-    --border: rgba(255,255,255,.07);
-    --accent: #0070f3;
-    --accent2: #00d4ff;
-    --success: #00c896;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --text: #e8edf5;
-    --muted: #6b7a99;
-    --glow: 0 0 40px rgba(0,112,243,.25);
-  }
-  * { box-sizing:border-box; margin:0; padding:0; }
-  html, body { height:100%; font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); overflow:hidden; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SRV AI Outreach — CyberArc MSP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #080c14;
+      --surface: #0d1420;
+      --surface2: #111927;
+      --border: rgba(255, 255, 255, .07);
+      --accent: #0070f3;
+      --accent2: #00d4ff;
+      --success: #00c896;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --text: #e8edf5;
+      --muted: #6b7a99;
+      --glow: 0 0 40px rgba(0, 112, 243, .25);
+    }
 
-  /* SIDEBAR */
-  .sidebar {
-    position:fixed; left:0; top:0; width:220px; height:100vh;
-    background:var(--surface); border-right:1px solid var(--border);
-    display:flex; flex-direction:column; z-index:100; padding:0 0 24px;
-  }
-  .logo {
-    padding:28px 24px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; gap:10px;
-  }
-  .logo-mark {
-    width:34px; height:34px; background:var(--accent);
-    border-radius:8px; display:flex; align-items:center; justify-content:center;
-    font-family:'Syne',sans-serif; font-weight:800; font-size:14px; color:#fff;
-    box-shadow: var(--glow);
-  }
-  .logo-text { font-family:'Syne',sans-serif; font-weight:700; font-size:14px; line-height:1.2; }
-  .logo-sub { font-size:10px; color:var(--muted); font-weight:400; }
-  nav { flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:2px; }
-  .nav-item {
-    display:flex; align-items:center; gap:10px; padding:10px 12px;
-    border-radius:8px; cursor:pointer; font-size:13.5px; color:var(--muted);
-    transition:.15s; font-weight:500; text-decoration:none;
-    border:1px solid transparent;
-  }
-  .nav-item:hover { color:var(--text); background:var(--surface2); }
-  .nav-item.active { color:var(--text); background:rgba(0,112,243,.12); border-color:rgba(0,112,243,.2); }
-  .nav-item svg { width:16px; height:16px; flex-shrink:0; }
-  .nav-section { font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); padding:16px 12px 6px; }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-  /* STATUS BAR */
-  .status-bar {
-    margin:0 12px; padding:12px; border-radius:8px;
-    background:rgba(0,200,150,.08); border:1px solid rgba(0,200,150,.15);
-    font-size:12px;
-  }
-  .status-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--success); margin-right:6px; animation:pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    html,
+    body {
+      height: 100%;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+    }
 
-  /* MAIN */
-  main { margin-left:220px; height:100vh; overflow-y:auto; }
-  .topbar {
-    position:sticky; top:0; z-index:50; background:rgba(8,12,20,.8);
-    backdrop-filter:blur(12px); border-bottom:1px solid var(--border);
-    padding:0 32px; height:60px; display:flex; align-items:center; justify-content:space-between;
-  }
-  .topbar-title { font-family:'Syne',sans-serif; font-weight:700; font-size:18px; }
-  .topbar-right { display:flex; align-items:center; gap:12px; }
-  .badge {
-    padding:4px 10px; border-radius:20px; font-size:12px; font-weight:500;
-    background:rgba(0,112,243,.15); border:1px solid rgba(0,112,243,.3); color:var(--accent2);
-  }
-  .badge.green { background:rgba(0,200,150,.12); border-color:rgba(0,200,150,.25); color:var(--success); }
-  .badge.yellow { background:rgba(245,158,11,.1); border-color:rgba(245,158,11,.25); color:var(--warning); }
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 220px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      padding: 0 0 24px;
+    }
 
-  /* CONTENT */
-  .content { padding:32px; }
+    .logo {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-  /* STAT CARDS */
-  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
-  .stat-card {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    padding:20px 22px; position:relative; overflow:hidden;
-  }
-  .stat-card::before {
-    content:''; position:absolute; top:0; left:0; right:0; height:2px;
-    background:linear-gradient(90deg,var(--accent),var(--accent2));
-    opacity:0;
-  }
-  .stat-card.active::before { opacity:1; }
-  .stat-label { font-size:12px; color:var(--muted); font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
-  .stat-value { font-family:'Syne',sans-serif; font-size:32px; font-weight:800; margin:6px 0 2px; }
-  .stat-sub { font-size:12px; color:var(--muted); }
-  .stat-icon { position:absolute; right:16px; top:16px; font-size:28px; opacity:.25; }
+    .logo-mark {
+      width: 34px;
+      height: 34px;
+      background: var(--accent);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      color: #fff;
+      box-shadow: var(--glow);
+    }
 
-  /* PANEL GRID */
-  .panel-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-  .panel-grid.wide { grid-template-columns:1.4fr 1fr; }
-  .panel {
-    background:var(--surface); border:1px solid var(--border); border-radius:12px;
-    overflow:hidden;
-  }
-  .panel-header {
-    padding:16px 20px; border-bottom:1px solid var(--border);
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .panel-title { font-family:'Syne',sans-serif; font-weight:700; font-size:14px; }
-  .panel-body { padding:20px; }
+    .logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+    }
 
-  /* BUTTONS */
-  .btn {
-    display:inline-flex; align-items:center; gap:6px; padding:9px 16px;
-    border-radius:8px; font-size:13px; font-weight:500; cursor:pointer;
-    border:none; transition:.15s; font-family:'DM Sans',sans-serif;
-  }
-  .btn-primary { background:var(--accent); color:#fff; }
-  .btn-primary:hover { background:#0060d3; box-shadow:var(--glow); }
-  .btn-ghost { background:transparent; color:var(--muted); border:1px solid var(--border); }
-  .btn-ghost:hover { color:var(--text); border-color:rgba(255,255,255,.15); }
-  .btn-success { background:rgba(0,200,150,.15); color:var(--success); border:1px solid rgba(0,200,150,.25); }
-  .btn-success:hover { background:rgba(0,200,150,.25); }
-  .btn-danger { background:rgba(239,68,68,.1); color:var(--danger); border:1px solid rgba(239,68,68,.2); }
-  .btn-sm { padding:6px 12px; font-size:12px; }
+    .logo-sub {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 400;
+    }
 
-  /* FORM */
-  .form-group { margin-bottom:16px; }
-  label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; font-weight:500; }
-  input, select, textarea {
-    width:100%; background:var(--surface2); border:1px solid var(--border);
-    border-radius:8px; padding:9px 12px; font-size:13px; color:var(--text);
-    font-family:'DM Sans',sans-serif; outline:none; transition:.15s;
-  }
-  input:focus, select:focus, textarea:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(0,112,243,.1); }
-  input::placeholder { color:var(--muted); }
-  .tags-input { display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:6px 10px; min-height:40px; }
-  .tag { background:rgba(0,112,243,.15); border:1px solid rgba(0,112,243,.3); border-radius:4px; padding:2px 8px; font-size:12px; display:flex; align-items:center; gap:4px; }
-  .tag-remove { cursor:pointer; color:var(--muted); }
-  .tags-input input { background:none; border:none; box-shadow:none; padding:2px 4px; flex:1; min-width:80px; }
+    nav {
+      flex: 1;
+      padding: 16px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
 
-  /* TABLE */
-  .table-wrap { overflow-x:auto; }
-  table { width:100%; border-collapse:collapse; font-size:13px; }
-  th { text-align:left; padding:10px 14px; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); border-bottom:1px solid var(--border); font-weight:600; }
-  td { padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.03); }
-  tr:hover td { background:rgba(255,255,255,.02); }
-  .status-badge { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.04em; }
-  .status-badge.pending { background:rgba(245,158,11,.1); color:var(--warning); }
-  .status-badge.sent { background:rgba(0,112,243,.12); color:var(--accent2); }
-  .status-badge.replied { background:rgba(0,200,150,.12); color:var(--success); }
-  .status-badge.error { background:rgba(239,68,68,.1); color:var(--danger); }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13.5px;
+      color: var(--muted);
+      transition: .15s;
+      font-weight: 500;
+      text-decoration: none;
+      border: 1px solid transparent;
+    }
 
-  /* PAGE SECTIONS */
-  .page { display:none; }
-  .page.active { display:block; }
+    .nav-item:hover {
+      color: var(--text);
+      background: var(--surface2);
+    }
 
-  /* INBOX GRID */
-  .inbox-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
-  .inbox-card {
-    background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:16px;
-    display:flex; flex-direction:column; gap:10px;
-  }
-  .inbox-card.connected { border-color:rgba(0,200,150,.2); }
-  .inbox-email { font-size:13px; font-weight:500; }
-  .inbox-name { font-size:12px; color:var(--muted); }
+    .nav-item.active {
+      color: var(--text);
+      background: rgba(0, 112, 243, .12);
+      border-color: rgba(0, 112, 243, .2);
+    }
 
-  /* PROGRESS */
-  .progress-bar { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; }
-  .progress-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:2px; transition:.5s; }
+    .nav-item svg {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
 
-  /* TOAST */
-  #toast-container { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
-  .toast {
-    padding:12px 18px; border-radius:10px; font-size:13px; font-weight:500;
-    box-shadow:0 8px 24px rgba(0,0,0,.4); border:1px solid; max-width:320px;
-    animation:slideIn .25s ease; display:flex; align-items:center; gap:8px;
-  }
-  .toast.success { background:rgba(0,200,150,.12); border-color:rgba(0,200,150,.25); color:var(--success); }
-  .toast.error { background:rgba(239,68,68,.12); border-color:rgba(239,68,68,.25); color:var(--danger); }
-  .toast.info { background:rgba(0,112,243,.12); border-color:rgba(0,112,243,.25); color:var(--accent2); }
-  @keyframes slideIn { from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+    .nav-section {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      padding: 16px 12px 6px;
+    }
 
-  /* SCROLLBAR */
-  ::-webkit-scrollbar { width:5px; }
-  ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+    /* STATUS BAR */
+    .status-bar {
+      margin: 0 12px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(0, 200, 150, .08);
+      border: 1px solid rgba(0, 200, 150, .15);
+      font-size: 12px;
+    }
 
-  /* MODAL */
-  .modal-overlay {
-    position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(4px);
-    z-index:200; display:none; align-items:center; justify-content:center;
-  }
-  .modal-overlay.open { display:flex; }
-  .modal {
-    background:var(--surface); border:1px solid var(--border); border-radius:16px;
-    padding:28px; max-width:560px; width:90%; max-height:85vh; overflow-y:auto;
-  }
-  .modal-title { font-family:'Syne',sans-serif; font-weight:700; font-size:18px; margin-bottom:20px; }
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--success);
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
 
-  /* LOADING SPINNER */
-  .spinner { width:20px; height:20px; border:2px solid rgba(255,255,255,.15); border-top-color:var(--accent); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
-  @keyframes spin { to{transform:rotate(360deg)} }
+    @keyframes pulse {
 
-  /* EMAIL PREVIEW */
-  .email-preview { background:#fff; border-radius:8px; padding:0; overflow:hidden; }
-  .preview-subject { font-weight:700; font-size:16px; color:#111; padding:16px 20px; border-bottom:1px solid #eee; }
-  .preview-frame { padding:0; }
+      0%,
+      100% {
+        opacity: 1
+      }
 
-  /* HERO GRADIENT */
-  .hero-gradient {
-    background:linear-gradient(135deg, rgba(0,112,243,.08) 0%, rgba(0,212,255,.04) 50%, transparent 100%);
-    border:1px solid rgba(0,112,243,.1); border-radius:16px; padding:28px;
-    margin-bottom:24px;
-  }
-  .hero-title { font-family:'Syne',sans-serif; font-weight:800; font-size:26px; line-height:1.2; }
-  .hero-title span { background:linear-gradient(90deg,#0070f3,#00d4ff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-</style>
+      50% {
+        opacity: .4
+      }
+    }
+
+    /* MAIN */
+    main {
+      margin-left: 220px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(8, 12, 20, .8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(0, 112, 243, .15);
+      border: 1px solid rgba(0, 112, 243, .3);
+      color: var(--accent2);
+    }
+
+    .badge.green {
+      background: rgba(0, 200, 150, .12);
+      border-color: rgba(0, 200, 150, .25);
+      color: var(--success);
+    }
+
+    .badge.yellow {
+      background: rgba(245, 158, 11, .1);
+      border-color: rgba(245, 158, 11, .25);
+      color: var(--warning);
+    }
+
+    /* CONTENT */
+    .content {
+      padding: 32px;
+    }
+
+    /* STAT CARDS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      opacity: 0;
+    }
+
+    .stat-card.active::before {
+      opacity: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+      margin: 6px 0 2px;
+    }
+
+    .stat-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .stat-icon {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      font-size: 28px;
+      opacity: .25;
+    }
+
+    /* PANEL GRID */
+    .panel-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .panel-grid.wide {
+      grid-template-columns: 1.4fr 1fr;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .panel-body {
+      padding: 20px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: .15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #0060d3;
+      box-shadow: var(--glow);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, .15);
+    }
+
+    .btn-success {
+      background: rgba(0, 200, 150, .15);
+      color: var(--success);
+      border: 1px solid rgba(0, 200, 150, .25);
+    }
+
+    .btn-success:hover {
+      background: rgba(0, 200, 150, .25);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, .1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, .2);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* FORM */
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      outline: none;
+      transition: .15s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 112, 243, .1);
+    }
+
+    input::placeholder {
+      color: var(--muted);
+    }
+
+    .tags-input {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      min-height: 40px;
+    }
+
+    .tag {
+      background: rgba(0, 112, 243, .15);
+      border: 1px solid rgba(0, 112, 243, .3);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      color: var(--muted);
+    }
+
+    .tags-input input {
+      background: none;
+      border: none;
+      box-shadow: none;
+      padding: 2px 4px;
+      flex: 1;
+      min-width: 80px;
+    }
+
+    /* TABLE */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, .03);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, .02);
+    }
+
+    .status-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .status-badge.pending {
+      background: rgba(245, 158, 11, .1);
+      color: var(--warning);
+    }
+
+    .status-badge.sent {
+      background: rgba(0, 112, 243, .12);
+      color: var(--accent2);
+    }
+
+    .status-badge.replied {
+      background: rgba(0, 200, 150, .12);
+      color: var(--success);
+    }
+
+    .status-badge.error {
+      background: rgba(239, 68, 68, .1);
+      color: var(--danger);
+    }
+
+    /* PAGE SECTIONS */
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    /* INBOX GRID */
+    .inbox-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .inbox-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .inbox-card.connected {
+      border-color: rgba(0, 200, 150, .2);
+    }
+
+    .inbox-email {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .inbox-name {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* PROGRESS */
+    .progress-bar {
+      height: 4px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: .5s;
+    }
+
+    /* TOAST */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .4);
+      border: 1px solid;
+      max-width: 320px;
+      animation: slideIn .25s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.success {
+      background: rgba(0, 200, 150, .12);
+      border-color: rgba(0, 200, 150, .25);
+      color: var(--success);
+    }
+
+    .toast.error {
+      background: rgba(239, 68, 68, .12);
+      border-color: rgba(239, 68, 68, .25);
+      color: var(--danger);
+    }
+
+    .toast.info {
+      background: rgba(0, 112, 243, .12);
+      border-color: rgba(0, 112, 243, .25);
+      color: var(--accent2);
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(20px);
+        opacity: 0
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1
+      }
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 3px;
+    }
+
+    /* MODAL */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      max-width: 560px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+
+    /* LOADING SPINNER */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, .15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg)
+      }
+    }
+
+    /* EMAIL PREVIEW */
+    .email-preview {
+      background: #fff;
+      border-radius: 8px;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .preview-subject {
+      font-weight: 700;
+      font-size: 16px;
+      color: #111;
+      padding: 16px 20px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .preview-frame {
+      padding: 0;
+    }
+
+    /* HERO GRADIENT */
+    .hero-gradient {
+      background: linear-gradient(135deg, rgba(0, 112, 243, .08) 0%, rgba(0, 212, 255, .04) 50%, transparent 100%);
+      border: 1px solid rgba(0, 112, 243, .1);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      line-height: 1.2;
+    }
+
+    .hero-title span {
+      background: linear-gradient(90deg, #0070f3, #00d4ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="logo">
-    <div class="logo-mark">CA</div>
-    <div>
-      <div class="logo-text">CyberArc MSP</div>
-      <div class="logo-sub">AI Outreach Platform</div>
-    </div>
-  </div>
-  <nav>
-    <div class="nav-section">Campaign</div>
-    <a class="nav-item active" onclick="showPage('dashboard')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Dashboard
-    </a>
-    <a class="nav-item" onclick="showPage('search')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-      Find Leads
-    </a>
-    <a class="nav-item" onclick="showPage('leads')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-      Leads <span id="leads-count-badge" class="badge" style="margin-left:auto;font-size:11px;padding:2px 7px;">0</span>
-    </a>
-    <a class="nav-item" onclick="showPage('outbox')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-      Send Emails
-    </a>
-    <a class="nav-item" onclick="showPage('replies')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      Replies <span id="replies-badge" class="badge green" style="margin-left:auto;font-size:11px;padding:2px 7px;">0</span>
-    </a>
-    <div class="nav-section">System</div>
-    <a class="nav-item" onclick="showPage('inboxes')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-      O365 Inboxes
-    </a>
-    <a class="nav-item" onclick="showPage('settings')" href="#">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      Settings
-    </a>
-  </nav>
-  <div class="status-bar" id="system-status">
-    <span class="status-dot"></span>
-    <span id="status-text">Loading...</span>
-  </div>
-</aside>
-
-<!-- MAIN CONTENT -->
-<main>
-  <div class="topbar">
-    <span class="topbar-title" id="page-title">Dashboard</span>
-    <div class="topbar-right">
-      <span class="badge" id="model-badge">⚡ Groq</span>
-      <span class="badge green" id="inbox-badge">📬 Loading...</span>
-    </div>
-  </div>
-
-  <!-- ═══════════════ DASHBOARD ═══════════════ -->
-  <div id="page-dashboard" class="page active">
-    <div class="content">
-      <div class="hero-gradient">
-        <div class="hero-title">AI-Powered B2B Outreach<br><span>Automated. Personalized. Scalable.</span></div>
-        <p style="margin-top:10px;color:var(--muted);font-size:14px;">CyberArc MSP · Powered by Groq + OpenRouter · O365 Multi-Inbox</p>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-card active">
-          <div class="stat-icon">👥</div>
-          <div class="stat-label">Total Leads</div>
-          <div class="stat-value" id="s-leads">0</div>
-          <div class="stat-sub">In database</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📤</div>
-          <div class="stat-label">Emails Sent</div>
-          <div class="stat-value" id="s-sent">0</div>
-          <div class="stat-sub">This campaign</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">💬</div>
-          <div class="stat-label">Replies</div>
-          <div class="stat-value" id="s-replies">0</div>
-          <div class="stat-sub" id="s-reply-rate">0% reply rate</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📬</div>
-          <div class="stat-label">Active Inboxes</div>
-          <div class="stat-value" id="s-inboxes">0</div>
-          <div class="stat-sub">O365 accounts</div>
-        </div>
-      </div>
-
-      <div class="panel-grid wide">
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Quick Actions</span>
-          </div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;">
-            <button class="btn btn-primary" onclick="showPage('search')" style="justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Search Apollo Leads
-            </button>
-            <button class="btn btn-success" onclick="showPage('outbox')" style="justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-              Start Sending Emails
-            </button>
-            <button class="btn btn-ghost" onclick="checkReplies()" style="justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              Check Replies Now
-            </button>
-            <button class="btn btn-ghost" onclick="showPage('inboxes')" style="justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/></svg>
-              Manage O365 Inboxes
-            </button>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Campaign Health</span>
-          </div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:16px;">
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-                <span style="color:var(--muted)">Lead Pipeline</span>
-                <span id="h-leads-pct">0%</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" id="h-leads-bar" style="width:0%"></div></div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-                <span style="color:var(--muted)">Email Delivery</span>
-                <span id="h-sent-pct">0%</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" id="h-sent-bar" style="width:0%"></div></div>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
-                <span style="color:var(--muted)">Reply Rate</span>
-                <span id="h-reply-pct">0%</span>
-              </div>
-              <div class="progress-bar"><div class="progress-fill" id="h-reply-bar" style="width:0%"></div></div>
-            </div>
-            <div id="last-run-text" style="font-size:12px;color:var(--muted);margin-top:4px;">Last run: Never</div>
-          </div>
-        </div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">CA</div>
+      <div>
+        <div class="logo-text">CyberArc MSP</div>
+        <div class="logo-sub">AI Outreach Platform</div>
       </div>
     </div>
-  </div>
+    <nav>
+      <div class="nav-section">Campaign</div>
+      <a class="nav-item active" onclick="showPage('dashboard')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        Dashboard
+      </a>
+      <a class="nav-item" onclick="showPage('search')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        Find Leads
+      </a>
+      <a class="nav-item" onclick="showPage('leads')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+        </svg>
+        Leads <span id="leads-count-badge" class="badge"
+          style="margin-left:auto;font-size:11px;padding:2px 7px;">0</span>
+      </a>
+      <a class="nav-item" onclick="showPage('outbox')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+        </svg>
+        Send Emails
+      </a>
+      <a class="nav-item" onclick="showPage('replies')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+        </svg>
+        Replies <span id="replies-badge" class="badge green"
+          style="margin-left:auto;font-size:11px;padding:2px 7px;">0</span>
+      </a>
+      <div class="nav-section">System</div>
+      <a class="nav-item" onclick="showPage('inboxes')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+        O365 Inboxes
+      </a>
+      <a class="nav-item" onclick="showPage('settings')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+        Settings
+      </a>
+    </nav>
+    <div class="status-bar" id="system-status">
+      <span class="status-dot"></span>
+      <span id="status-text">Loading...</span>
+    </div>
+  </aside>
 
-  <!-- ═══════════════ SEARCH ═══════════════ -->
-  <div id="page-search" class="page">
-    <div class="content">
-      <div class="panel-grid" style="grid-template-columns:400px 1fr">
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">🔍 Apollo Lead Search</span></div>
-          <div class="panel-body">
-            <div class="form-group">
-              <label>Job Titles (press Enter to add)</label>
-              <div class="tags-input" id="titles-tags">
-                <input type="text" placeholder="e.g. CTO, VP Technology" id="titles-input" onkeydown="addTag(event,'titles')">
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Industry</label>
-              <input type="text" id="industry-input" placeholder="e.g. Banking, SaaS, Healthcare">
-            </div>
-            <div class="form-group">
-              <label>Locations (press Enter)</label>
-              <div class="tags-input" id="locations-tags">
-                <input type="text" placeholder="e.g. India, Mumbai, Singapore" id="locations-input" onkeydown="addTag(event,'locations')">
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Seniority</label>
-              <select id="seniority-input" multiple style="height:90px;">
-                <option value="c_suite" selected>C-Suite (CEO, CTO, CISO)</option>
-                <option value="vp" selected>VP Level</option>
-                <option value="director" selected>Director</option>
-                <option value="manager">Manager</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Results per page</label>
-              <input type="number" id="per-page-input" value="25" min="5" max="100">
-            </div>
-            <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="searchApollo()" id="search-btn">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-              Search Apollo
-            </button>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Results</span>
-            <div style="display:flex;gap:8px;" id="search-actions" style="display:none">
-              <button class="btn btn-ghost btn-sm" onclick="moveToOutbox()">Move to Outbox</button>
-            </div>
-          </div>
-          <div class="panel-body" id="search-results">
-            <div style="text-align:center;color:var(--muted);padding:60px 0;">
-              <div style="font-size:40px;margin-bottom:12px;">🔍</div>
-              <div>Search for leads using Apollo.io</div>
-              <div style="font-size:12px;margin-top:6px;">Results will appear here</div>
-            </div>
-          </div>
-        </div>
+  <!-- MAIN CONTENT -->
+  <main>
+    <div class="topbar">
+      <span class="topbar-title" id="page-title">Dashboard</span>
+      <div class="topbar-right">
+        <span class="badge" id="model-badge">⚡ Groq</span>
+        <span class="badge green" id="inbox-badge">📬 Loading...</span>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════ LEADS ═══════════════ -->
-  <div id="page-leads" class="page">
-    <div class="content">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">All Leads</span>
-          <div style="display:flex;gap:8px;">
-            <button class="btn btn-success btn-sm" onclick="moveAllToOutbox()">Move All to Outbox</button>
-            <button class="btn btn-ghost btn-sm" onclick="loadLeads()">Refresh</button>
+    <!-- ═══════════════ DASHBOARD ═══════════════ -->
+    <div id="page-dashboard" class="page active">
+      <div class="content">
+        <div class="hero-gradient">
+          <div class="hero-title">AI-Powered B2B Outreach<br><span>Automated. Personalized. Scalable.</span></div>
+          <p style="margin-top:10px;color:var(--muted);font-size:14px;">CyberArc MSP · Powered by Groq + OpenRouter ·
+            O365 Multi-Inbox</p>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card active">
+            <div class="stat-icon">👥</div>
+            <div class="stat-label">Total Leads</div>
+            <div class="stat-value" id="s-leads">0</div>
+            <div class="stat-sub">In database</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📤</div>
+            <div class="stat-label">Emails Sent</div>
+            <div class="stat-value" id="s-sent">0</div>
+            <div class="stat-sub">This campaign</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💬</div>
+            <div class="stat-label">Replies</div>
+            <div class="stat-value" id="s-replies">0</div>
+            <div class="stat-sub" id="s-reply-rate">0% reply rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📬</div>
+            <div class="stat-label">Active Inboxes</div>
+            <div class="stat-value" id="s-inboxes">0</div>
+            <div class="stat-sub">O365 accounts</div>
           </div>
         </div>
-        <div class="panel-body" style="padding:0;">
-          <div class="table-wrap">
-            <table id="leads-table">
-              <thead><tr>
-                <th>Email</th><th>Name</th><th>Company</th><th>Role</th><th>Location</th><th>Industry</th><th>Status</th>
-              </tr></thead>
-              <tbody id="leads-tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- ═══════════════ OUTBOX / SEND ═══════════════ -->
-  <div id="page-outbox" class="page">
-    <div class="content">
-      <div class="panel-grid" style="grid-template-columns:320px 1fr">
-        <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="panel-grid wide">
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">⚙️ Send Config</span></div>
-            <div class="panel-body">
-              <div class="form-group">
-                <label>Daily Email Limit</label>
-                <input type="number" id="daily-limit" value="5" min="1" max="50">
-              </div>
-              <div class="form-group">
-                <label>Delay Between Emails (seconds)</label>
-                <input type="number" id="email-delay" value="65" min="30" max="300">
-              </div>
-              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="startSending()" id="send-btn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
-                Send Emails
+            <div class="panel-header">
+              <span class="panel-title">Quick Actions</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn btn-primary" onclick="showPage('search')" style="justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                Search Apollo Leads
+              </button>
+              <button class="btn btn-success" onclick="showPage('outbox')" style="justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                </svg>
+                Start Sending Emails
+              </button>
+              <button class="btn btn-ghost" onclick="checkReplies()" style="justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                </svg>
+                Check Replies Now
+              </button>
+              <button class="btn btn-ghost" onclick="showPage('inboxes')" style="justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                </svg>
+                Manage O365 Inboxes
               </button>
             </div>
           </div>
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">🔮 Preview Email</span></div>
-            <div class="panel-body">
-              <div class="form-group">
-                <label>Lead First Name</label>
-                <input type="text" id="prev-first" placeholder="John">
+            <div class="panel-header">
+              <span class="panel-title">Campaign Health</span>
+            </div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:16px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                  <span style="color:var(--muted)">Lead Pipeline</span>
+                  <span id="h-leads-pct">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="h-leads-bar" style="width:0%"></div>
+                </div>
               </div>
-              <div class="form-group">
-                <label>Company</label>
-                <input type="text" id="prev-company" placeholder="Acme Bank">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                  <span style="color:var(--muted)">Email Delivery</span>
+                  <span id="h-sent-pct">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="h-sent-bar" style="width:0%"></div>
+                </div>
               </div>
-              <div class="form-group">
-                <label>Role</label>
-                <input type="text" id="prev-role" placeholder="CTO">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+                  <span style="color:var(--muted)">Reply Rate</span>
+                  <span id="h-reply-pct">0%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" id="h-reply-bar" style="width:0%"></div>
+                </div>
               </div>
-              <div class="form-group">
-                <label>Industry</label>
-                <input type="text" id="prev-industry" placeholder="Banking">
-              </div>
-              <div class="form-group">
-                <label>Location</label>
-                <input type="text" id="prev-location" placeholder="Mumbai, India">
-              </div>
-              <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="previewEmail()" id="preview-btn">Generate Preview</button>
+              <div id="last-run-text" style="font-size:12px;color:var(--muted);margin-top:4px;">Last run: Never</div>
             </div>
           </div>
         </div>
-        <div class="panel" style="overflow:hidden;">
+      </div>
+    </div>
+
+    <!-- ═══════════════ SEARCH ═══════════════ -->
+    <div id="page-search" class="page">
+      <div class="content">
+        <div class="panel-grid" style="grid-template-columns:400px 1fr">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🔍 Apollo Lead Search</span></div>
+            <div class="panel-body">
+              <div class="form-group">
+                <label>Job Titles (press Enter to add)</label>
+                <div class="tags-input" id="titles-tags">
+                  <input type="text" placeholder="e.g. CTO, VP Technology" id="titles-input"
+                    onkeydown="addTag(event,'titles')">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Industry</label>
+                <input type="text" id="industry-input" placeholder="e.g. Banking, SaaS, Healthcare">
+              </div>
+              <div class="form-group">
+                <label>Locations (press Enter)</label>
+                <div class="tags-input" id="locations-tags">
+                  <input type="text" placeholder="e.g. India, Mumbai, Singapore" id="locations-input"
+                    onkeydown="addTag(event,'locations')">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Company Size</label>
+                <select id="company-size-input" multiple style="height:90px;">
+                  <option value="1,10">1-10 Employees</option>
+                  <option value="11,50">11-50 Employees</option>
+                  <option value="51,200" selected>51-200 Employees</option>
+                  <option value="201,500">201-500 Employees</option>
+                  <option value="501,1000">501-1000 Employees</option>
+                  <option value="1001,5000">1001-5000 Employees</option>
+                  <option value="5001,10000">5001-10000 Employees</option>
+                  <option value="10001">10000+ Employees</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Results per page</label>
+                <input type="number" id="per-page-input" value="25" min="5" max="100">
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="searchApollo()"
+                id="search-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                Search Apollo
+              </button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Results</span>
+              <div style="display:flex;gap:8px;" id="search-actions" style="display:none">
+                <button class="btn btn-ghost btn-sm" onclick="moveToOutbox()">Move to Outbox</button>
+              </div>
+            </div>
+            <div class="panel-body" id="search-results">
+              <div style="text-align:center;color:var(--muted);padding:60px 0;">
+                <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+                <div>Search for leads using Apollo.io</div>
+                <div style="font-size:12px;margin-top:6px;">Results will appear here</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════ LEADS ═══════════════ -->
+    <div id="page-leads" class="page">
+      <div class="content">
+        <div class="panel">
           <div class="panel-header">
-            <span class="panel-title">Outbox Queue</span>
-            <button class="btn btn-ghost btn-sm" onclick="loadOutbox()">Refresh</button>
+            <span class="panel-title">All Leads</span>
+            <div style="display:flex;gap:8px;">
+              <button class="btn btn-success btn-sm" onclick="moveAllToOutbox()">Move All to Outbox</button>
+              <button class="btn btn-ghost btn-sm" onclick="loadLeads()">Refresh</button>
+            </div>
           </div>
           <div class="panel-body" style="padding:0;">
             <div class="table-wrap">
-              <table>
-                <thead><tr><th>Email</th><th>Company</th><th>Role</th><th>Status</th><th>Sent From</th><th>Time</th></tr></thead>
-                <tbody id="outbox-tbody"></tbody>
+              <table id="leads-table">
+                <thead>
+                  <tr>
+                    <th>Email</th>
+                    <th>Name</th>
+                    <th>Company</th>
+                    <th>Role</th>
+                    <th>Location</th>
+                    <th>Industry</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="leads-tbody"></tbody>
               </table>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════ REPLIES ═══════════════ -->
-  <div id="page-replies" class="page">
-    <div class="content">
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">💬 Reply Inbox</span>
-          <button class="btn btn-success btn-sm" onclick="checkReplies()" id="check-replies-btn">Check All Inboxes</button>
-        </div>
-        <div class="panel-body" style="padding:0;">
-          <div class="table-wrap">
-            <table>
-              <thead><tr><th>From</th><th>Subject</th><th>Inbox</th><th>Preview</th><th>Time</th></tr></thead>
-              <tbody id="replies-tbody"></tbody>
-            </table>
+    <!-- ═══════════════ OUTBOX / SEND ═══════════════ -->
+    <div id="page-outbox" class="page">
+      <div class="content">
+        <div class="panel-grid" style="grid-template-columns:320px 1fr">
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">⚙️ Send Config</span></div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label>Daily Email Limit</label>
+                  <input type="number" id="daily-limit" value="5" min="1" max="50">
+                </div>
+                <div class="form-group">
+                  <label>Delay Between Emails (seconds)</label>
+                  <input type="number" id="email-delay" value="65" min="30" max="300">
+                </div>
+                <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="startSending()"
+                  id="send-btn">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
+                  Send Emails
+                </button>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">🔮 Preview Email</span></div>
+              <div class="panel-body">
+                <div class="form-group">
+                  <label>Lead First Name</label>
+                  <input type="text" id="prev-first" placeholder="John">
+                </div>
+                <div class="form-group">
+                  <label>Company</label>
+                  <input type="text" id="prev-company" placeholder="Acme Bank">
+                </div>
+                <div class="form-group">
+                  <label>Role</label>
+                  <input type="text" id="prev-role" placeholder="CTO">
+                </div>
+                <div class="form-group">
+                  <label>Industry</label>
+                  <input type="text" id="prev-industry" placeholder="Banking">
+                </div>
+                <div class="form-group">
+                  <label>Location</label>
+                  <input type="text" id="prev-location" placeholder="Mumbai, India">
+                </div>
+                <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="previewEmail()"
+                  id="preview-btn">Generate Preview</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="overflow:hidden;">
+            <div class="panel-header">
+              <span class="panel-title">Outbox Queue</span>
+              <button class="btn btn-ghost btn-sm" onclick="loadOutbox()">Refresh</button>
+            </div>
+            <div class="panel-body" style="padding:0;">
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Email</th>
+                      <th>Company</th>
+                      <th>Role</th>
+                      <th>Status</th>
+                      <th>Sent From</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="outbox-tbody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════ INBOXES ═══════════════ -->
-  <div id="page-inboxes" class="page">
-    <div class="content">
-      <div class="panel" style="margin-bottom:20px;">
-        <div class="panel-header">
-          <span class="panel-title">📬 O365 Inboxes (IMAP enabled, SMTP AUTH enabled)</span>
-          <button class="btn btn-success btn-sm" onclick="testAllInboxes()">Test All Connections</button>
-        </div>
-        <div class="panel-body">
-          <div class="inbox-grid" id="inbox-grid">
-            <div style="color:var(--muted);font-size:13px;">Loading inboxes...</div>
-          </div>
-        </div>
-      </div>
-      <div class="panel">
-        <div class="panel-header"><span class="panel-title">How to get App Passwords</span></div>
-        <div class="panel-body" style="font-size:13px;line-height:1.8;color:var(--muted);">
-          <ol style="list-style:decimal;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
-            <li>Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank" style="color:var(--accent2);">mysignins.microsoft.com/security-info</a> for each account</li>
-            <li>Ensure MFA (Microsoft Authenticator) is already enabled</li>
-            <li>Click <strong style="color:var(--text);">"+ Add sign-in method"</strong></li>
-            <li>Select <strong style="color:var(--text);">"App password"</strong></li>
-            <li>Name it <em>SRV Outreach</em> — copy the 16-character password</li>
-            <li>Add it to your <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">.env</code> file as <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">OUTLOOK_PASS_1</code></li>
-          </ol>
-          <div style="margin-top:16px;padding:12px;background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.15);border-radius:8px;">
-            ✅ Your admin already confirmed: <strong style="color:var(--text)">IMAP Enabled + SmtpClientAuthenticationDisabled = False</strong> — all 5 accounts are ready.
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════ SETTINGS ═══════════════ -->
-  <div id="page-settings" class="page">
-    <div class="content">
-      <div class="panel-grid">
+    <!-- ═══════════════ REPLIES ═══════════════ -->
+    <div id="page-replies" class="page">
+      <div class="content">
         <div class="panel">
-          <div class="panel-header"><span class="panel-title">🔑 API Keys</span></div>
-          <div class="panel-body">
-            <div class="form-group">
-              <label>Groq API Key</label>
-              <input type="password" id="s-groq" placeholder="gsk_...">
-            </div>
-            <div class="form-group">
-              <label>OpenRouter API Key (fallback)</label>
-              <input type="password" id="s-openrouter" placeholder="sk-or-...">
-            </div>
-            <div class="form-group">
-              <label>Apollo.io API Key</label>
-              <input type="password" id="s-apollo" placeholder="Your Apollo key">
-            </div>
-            <div class="form-group">
-              <label>Calendly URL</label>
-              <input type="text" id="s-calendly" placeholder="https://calendly.com/...">
-            </div>
-            <div class="form-group">
-              <label>Sender Name</label>
-              <input type="text" id="s-sender-name" placeholder="CyberArc MSP">
-            </div>
-            <div class="form-group">
-              <label>Sender Title</label>
-              <input type="text" id="s-sender-title" placeholder="Enterprise Solutions Architect">
-            </div>
-            <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveSettings()">Save Settings</button>
+          <div class="panel-header">
+            <span class="panel-title">💬 Reply Inbox</span>
+            <button class="btn btn-success btn-sm" onclick="checkReplies()" id="check-replies-btn">Check All
+              Inboxes</button>
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">📬 O365 Account Config</span></div>
-          <div class="panel-body">
-            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Configure up to 5 O365 accounts. Use App Passwords (not login password).</div>
-            <div id="o365-rows"></div>
-            <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;" onclick="saveO365Settings()">Save Inboxes</button>
+          <div class="panel-body" style="padding:0;">
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>From</th>
+                    <th>Subject</th>
+                    <th>Inbox</th>
+                    <th>Preview</th>
+                    <th>Time</th>
+                  </tr>
+                </thead>
+                <tbody id="replies-tbody"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</main>
 
-<!-- EMAIL PREVIEW MODAL -->
-<div class="modal-overlay" id="preview-modal">
-  <div class="modal" style="max-width:660px;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div class="modal-title">Email Preview</div>
-      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕ Close</button>
+    <!-- ═══════════════ INBOXES ═══════════════ -->
+    <div id="page-inboxes" class="page">
+      <div class="content">
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">📬 O365 Inboxes (IMAP enabled, SMTP AUTH enabled)</span>
+            <button class="btn btn-success btn-sm" onclick="testAllInboxes()">Test All Connections</button>
+          </div>
+          <div class="panel-body">
+            <div class="inbox-grid" id="inbox-grid">
+              <div style="color:var(--muted);font-size:13px;">Loading inboxes...</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">How to get App Passwords</span></div>
+          <div class="panel-body" style="font-size:13px;line-height:1.8;color:var(--muted);">
+            <ol style="list-style:decimal;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
+              <li>Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank"
+                  style="color:var(--accent2);">mysignins.microsoft.com/security-info</a> for each account</li>
+              <li>Ensure MFA (Microsoft Authenticator) is already enabled</li>
+              <li>Click <strong style="color:var(--text);">"+ Add sign-in method"</strong></li>
+              <li>Select <strong style="color:var(--text);">"App password"</strong></li>
+              <li>Name it <em>SRV Outreach</em> — copy the 16-character password</li>
+              <li>Add it to your <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">.env</code>
+                file as <code
+                  style="background:var(--surface2);padding:2px 6px;border-radius:4px;">OUTLOOK_PASS_1</code></li>
+            </ol>
+            <div
+              style="margin-top:16px;padding:12px;background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.15);border-radius:8px;">
+              ✅ Your admin already confirmed: <strong style="color:var(--text)">IMAP Enabled +
+                SmtpClientAuthenticationDisabled = False</strong> — all 5 accounts are ready.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div id="preview-subject" style="font-weight:700;font-size:15px;margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;"></div>
-    <div id="preview-content" style="max-height:500px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);"></div>
+
+    <!-- ═══════════════ SETTINGS ═══════════════ -->
+    <div id="page-settings" class="page">
+      <div class="content">
+        <div class="panel-grid">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🔑 API Keys</span></div>
+            <div class="panel-body">
+              <div class="form-group">
+                <label>Groq API Key</label>
+                <input type="password" id="s-groq" placeholder="gsk_...">
+              </div>
+              <div class="form-group">
+                <label>OpenRouter API Key (fallback)</label>
+                <input type="password" id="s-openrouter" placeholder="sk-or-...">
+              </div>
+              <div class="form-group">
+                <label>Apollo.io API Key</label>
+                <input type="password" id="s-apollo" placeholder="Your Apollo key">
+              </div>
+              <div class="form-group">
+                <label>Calendly URL</label>
+                <input type="text" id="s-calendly" placeholder="https://calendly.com/...">
+              </div>
+              <div class="form-group">
+                <label>Sender Name</label>
+                <input type="text" id="s-sender-name" placeholder="CyberArc MSP">
+              </div>
+              <div class="form-group">
+                <label>Sender Title</label>
+                <input type="text" id="s-sender-title" placeholder="Enterprise Solutions Architect">
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveSettings()">Save
+                Settings</button>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">📬 O365 Account Config</span></div>
+            <div class="panel-body">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Configure up to 5 O365 accounts. Use
+                App Passwords (not login password).</div>
+              <div id="o365-rows"></div>
+              <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;"
+                onclick="saveO365Settings()">Save Inboxes</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- EMAIL PREVIEW MODAL -->
+  <div class="modal-overlay" id="preview-modal">
+    <div class="modal" style="max-width:660px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div class="modal-title">Email Preview</div>
+        <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕ Close</button>
+      </div>
+      <div id="preview-subject"
+        style="font-weight:700;font-size:15px;margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;">
+      </div>
+      <div id="preview-content"
+        style="max-height:500px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);"></div>
+    </div>
   </div>
-</div>
 
-<div id="toast-container"></div>
+  <div id="toast-container"></div>
 
-<script>
-const API = '';  // Same origin
+  <script>
+    const API = '';  // Same origin
 
-// ────────────────────────────────
-// NAVIGATION
-// ────────────────────────────────
-const pages = {
-  dashboard: 'Dashboard',
-  search: 'Find Leads',
-  leads: 'All Leads',
-  outbox: 'Send Emails',
-  replies: 'Reply Inbox',
-  inboxes: 'O365 Inboxes',
-  settings: 'Settings',
-};
+    // ────────────────────────────────
+    // NAVIGATION
+    // ────────────────────────────────
+    const pages = {
+      dashboard: 'Dashboard',
+      search: 'Find Leads',
+      leads: 'All Leads',
+      outbox: 'Send Emails',
+      replies: 'Reply Inbox',
+      inboxes: 'O365 Inboxes',
+      settings: 'Settings',
+    };
 
-function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  document.querySelectorAll('.nav-item').forEach(n => {
-    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(name)) n.classList.add('active');
-  });
-  document.getElementById('page-title').textContent = pages[name] || name;
-  if (name === 'leads') loadLeads();
-  if (name === 'outbox') loadOutbox();
-  if (name === 'replies') loadReplies();
-  if (name === 'inboxes') loadInboxes();
-  if (name === 'settings') initSettings();
-}
-
-// ────────────────────────────────
-// TOAST
-// ────────────────────────────────
-function toast(msg, type = 'info') {
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✕':'ℹ'}</span> ${msg}`;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 4000);
-}
-
-// ────────────────────────────────
-// API HELPERS
-// ────────────────────────────────
-async function api(path, method='GET', body=null) {
-  const opts = { method, headers: {'Content-Type':'application/json'} };
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(API + path, opts);
-  if (!r.ok) {
-    const err = await r.json().catch(()=>({detail: r.statusText}));
-    throw new Error(err.detail || r.statusText);
-  }
-  return r.json();
-}
-
-// ────────────────────────────────
-// STATS / DASHBOARD
-// ────────────────────────────────
-async function refreshStats() {
-  try {
-    const s = await api('/api/stats');
-    document.getElementById('s-leads').textContent = s.leads;
-    document.getElementById('s-sent').textContent = s.sent;
-    document.getElementById('s-replies').textContent = s.replied;
-    document.getElementById('s-inboxes').textContent = s.inboxes;
-    document.getElementById('leads-count-badge').textContent = s.leads;
-    document.getElementById('replies-badge').textContent = s.replied;
-
-    const rate = s.sent > 0 ? Math.round(s.replied / s.sent * 100) : 0;
-    document.getElementById('s-reply-rate').textContent = rate + '% reply rate';
-
-    const sentPct = s.leads > 0 ? Math.round(s.sent / s.leads * 100) : 0;
-    document.getElementById('h-leads-pct').textContent = s.leads + ' leads';
-    document.getElementById('h-leads-bar').style.width = Math.min(100, s.leads) + '%';
-    document.getElementById('h-sent-pct').textContent = sentPct + '%';
-    document.getElementById('h-sent-bar').style.width = sentPct + '%';
-    document.getElementById('h-reply-pct').textContent = rate + '%';
-    document.getElementById('h-reply-bar').style.width = rate + '%';
-
-    if (s.last_run) {
-      document.getElementById('last-run-text').textContent = 'Last run: ' + new Date(s.last_run).toLocaleString();
+    function showPage(name) {
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      document.getElementById('page-' + name).classList.add('active');
+      document.querySelectorAll('.nav-item').forEach(n => {
+        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(name)) n.classList.add('active');
+      });
+      document.getElementById('page-title').textContent = pages[name] || name;
+      if (name === 'leads') loadLeads();
+      if (name === 'outbox') loadOutbox();
+      if (name === 'replies') loadReplies();
+      if (name === 'inboxes') loadInboxes();
+      if (name === 'settings') initSettings();
     }
-  } catch(e) {}
 
-  try {
-    const h = await api('/api/health');
-    document.getElementById('status-text').textContent = `${h.inboxes} inbox${h.inboxes!==1?'es':''} · ${h.groq?'Groq':'OpenRouter'}`;
-    document.getElementById('inbox-badge').textContent = `📬 ×${h.inboxes}`;
-    document.getElementById('model-badge').textContent = h.groq ? '⚡ Groq' : '⚡ OpenRouter';
-  } catch(e) {
-    document.getElementById('status-text').textContent = 'Server offline';
-  }
-}
+    // ────────────────────────────────
+    // TOAST
+    // ────────────────────────────────
+    function toast(msg, type = 'info') {
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+      document.getElementById('toast-container').appendChild(el);
+      setTimeout(() => el.remove(), 4000);
+    }
 
-// ────────────────────────────────
-// TAG INPUTS
-// ────────────────────────────────
-const tagData = { titles: [], locations: [] };
+    // ────────────────────────────────
+    // API HELPERS
+    // ────────────────────────────────
+    async function api(path, method = 'GET', body = null) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } };
+      if (body) opts.body = JSON.stringify(body);
+      const r = await fetch(API + path, opts);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({ detail: r.statusText }));
+        throw new Error(err.detail || r.statusText);
+      }
+      return r.json();
+    }
 
-function addTag(e, type) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const input = document.getElementById(type + '-input');
-  const val = input.value.trim();
-  if (!val || tagData[type].includes(val)) return;
-  tagData[type].push(val);
-  renderTags(type);
-  input.value = '';
-}
+    // ────────────────────────────────
+    // STATS / DASHBOARD
+    // ────────────────────────────────
+    async function refreshStats() {
+      try {
+        const s = await api('/api/stats');
+        document.getElementById('s-leads').textContent = s.leads;
+        document.getElementById('s-sent').textContent = s.sent;
+        document.getElementById('s-replies').textContent = s.replied;
+        document.getElementById('s-inboxes').textContent = s.inboxes;
+        document.getElementById('leads-count-badge').textContent = s.leads;
+        document.getElementById('replies-badge').textContent = s.replied;
 
-function removeTag(type, i) {
-  tagData[type].splice(i, 1);
-  renderTags(type);
-}
+        const rate = s.sent > 0 ? Math.round(s.replied / s.sent * 100) : 0;
+        document.getElementById('s-reply-rate').textContent = rate + '% reply rate';
 
-function renderTags(type) {
-  const container = document.getElementById(type + '-tags');
-  const input = document.getElementById(type + '-input');
-  container.innerHTML = '';
-  tagData[type].forEach((t, i) => {
-    const tag = document.createElement('div');
-    tag.className = 'tag';
-    tag.innerHTML = `${t} <span class="tag-remove" onclick="removeTag('${type}',${i})">✕</span>`;
-    container.appendChild(tag);
-  });
-  container.appendChild(input);
-}
+        const sentPct = s.leads > 0 ? Math.round(s.sent / s.leads * 100) : 0;
+        document.getElementById('h-leads-pct').textContent = s.leads + ' leads';
+        document.getElementById('h-leads-bar').style.width = Math.min(100, s.leads) + '%';
+        document.getElementById('h-sent-pct').textContent = sentPct + '%';
+        document.getElementById('h-sent-bar').style.width = sentPct + '%';
+        document.getElementById('h-reply-pct').textContent = rate + '%';
+        document.getElementById('h-reply-bar').style.width = rate + '%';
 
-// ────────────────────────────────
-// APOLLO SEARCH
-// ────────────────────────────────
-async function searchApollo() {
-  const btn = document.getElementById('search-btn');
-  const titles = tagData.titles;
-  const locations = tagData.locations;
-  const industry = document.getElementById('industry-input').value.trim();
-  const perPage = parseInt(document.getElementById('per-page-input').value) || 25;
-  const seniorityEl = document.getElementById('seniority-input');
-  const seniority = Array.from(seniorityEl.selectedOptions).map(o => o.value);
+        if (s.last_run) {
+          document.getElementById('last-run-text').textContent = 'Last run: ' + new Date(s.last_run).toLocaleString();
+        }
+      } catch (e) { }
 
-  if (!titles.length) { toast('Add at least one job title', 'error'); return; }
-  if (!industry) { toast('Enter an industry', 'error'); return; }
-  if (!locations.length) { toast('Add at least one location', 'error'); return; }
+      try {
+        const h = await api('/api/health');
+        document.getElementById('status-text').textContent = `${h.inboxes} inbox${h.inboxes !== 1 ? 'es' : ''} · ${h.groq ? 'Groq' : 'OpenRouter'}`;
+        document.getElementById('inbox-badge').textContent = `📬 ×${h.inboxes}`;
+        document.getElementById('model-badge').textContent = h.groq ? '⚡ Groq' : '⚡ OpenRouter';
+      } catch (e) {
+        document.getElementById('status-text').textContent = 'Server offline';
+      }
+    }
 
-  btn.innerHTML = '<span class="spinner"></span> Searching Apollo...';
-  btn.disabled = true;
-  document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;"><div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div><div>Searching Apollo.io...</div></div>';
+    // ────────────────────────────────
+    // TAG INPUTS
+    // ────────────────────────────────
+    const tagData = { titles: [], locations: [] };
 
-  try {
-    const res = await api('/api/apollo/search', 'POST', { titles, industry, locations, seniority, per_page: perPage });
-    renderSearchResults(res.leads);
-    toast(`Found ${res.found} leads (${res.new} new)`, 'success');
-    document.getElementById('search-actions').style.display = 'flex';
-  } catch(e) {
-    toast('Apollo search failed: ' + e.message, 'error');
-    document.getElementById('search-results').innerHTML = `<div style="text-align:center;color:var(--danger);padding:60px 0;">${e.message}</div>`;
-  } finally {
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Search Apollo';
-    btn.disabled = false;
-  }
-}
+    function addTag(e, type) {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const input = document.getElementById(type + '-input');
+      const val = input.value.trim();
+      if (!val || tagData[type].includes(val)) return;
+      tagData[type].push(val);
+      renderTags(type);
+      input.value = '';
+    }
 
-function renderSearchResults(leads) {
-  if (!leads.length) {
-    document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;">No results found. Try different filters.</div>';
-    return;
-  }
-  document.getElementById('search-results').innerHTML = `
+    function removeTag(type, i) {
+      tagData[type].splice(i, 1);
+      renderTags(type);
+    }
+
+    function renderTags(type) {
+      const container = document.getElementById(type + '-tags');
+      const input = document.getElementById(type + '-input');
+      container.innerHTML = '';
+      tagData[type].forEach((t, i) => {
+        const tag = document.createElement('div');
+        tag.className = 'tag';
+        tag.innerHTML = `${t} <span class="tag-remove" onclick="removeTag('${type}',${i})">✕</span>`;
+        container.appendChild(tag);
+      });
+      container.appendChild(input);
+    }
+
+    // ────────────────────────────────
+    // APOLLO SEARCH
+    // ────────────────────────────────
+    async function searchApollo() {
+      const btn = document.getElementById('search-btn');
+      const titles = tagData.titles;
+      const locations = tagData.locations;
+      const industry = document.getElementById('industry-input').value.trim();
+      const perPage = parseInt(document.getElementById('per-page-input').value) || 25;
+      const companySizeEl = document.getElementById('company-size-input');
+      const companySizes = Array.from(companySizeEl.selectedOptions).map(o => o.value);
+
+      if (!titles.length) { toast('Add at least one job title', 'error'); return; }
+      if (!industry) { toast('Enter an industry', 'error'); return; }
+      if (!locations.length) { toast('Add at least one location', 'error'); return; }
+
+      btn.innerHTML = '<span class="spinner"></span> Searching Apollo...';
+      btn.disabled = true;
+      document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;"><div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div><div>Searching Apollo.io...</div></div>';
+
+      try {
+        const res = await api('/api/apollo/search', 'POST', { titles, industry, locations, company_sizes: companySizes, per_page: perPage });
+        renderSearchResults(res.leads);
+        toast(`Found ${res.found} leads (${res.new} new)`, 'success');
+        document.getElementById('search-actions').style.display = 'flex';
+      } catch (e) {
+        toast('Apollo search failed: ' + e.message, 'error');
+        document.getElementById('search-results').innerHTML = `<div style="text-align:center;color:var(--danger);padding:60px 0;">${e.message}</div>`;
+      } finally {
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Search Apollo';
+        btn.disabled = false;
+      }
+    }
+
+    function renderSearchResults(leads) {
+      if (!leads.length) {
+        document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;">No results found. Try different filters.</div>';
+        return;
+      }
+      document.getElementById('search-results').innerHTML = `
     <div style="overflow-x:auto;">
     <table style="width:100%;font-size:12px;border-collapse:collapse;">
       <thead><tr>
@@ -826,157 +1436,157 @@ function renderSearchResults(leads) {
       </tr>`).join('')}</tbody>
     </table>
     </div>`;
-}
+    }
 
-async function moveToOutbox() {
-  try {
-    const r = await api('/api/leads/to-outbox', 'POST');
-    toast(`${r.queued} leads moved to outbox`, 'success');
-    refreshStats();
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function moveToOutbox() {
+      try {
+        const r = await api('/api/leads/to-outbox', 'POST');
+        toast(`${r.queued} leads moved to outbox`, 'success');
+        refreshStats();
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-async function moveAllToOutbox() {
-  try {
-    const r = await api('/api/leads/to-outbox', 'POST');
-    toast(`${r.queued} leads moved to outbox`, 'success');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function moveAllToOutbox() {
+      try {
+        const r = await api('/api/leads/to-outbox', 'POST');
+        toast(`${r.queued} leads moved to outbox`, 'success');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-// ────────────────────────────────
-// LEADS TABLE
-// ────────────────────────────────
-async function loadLeads() {
-  const tbody = document.getElementById('leads-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">Loading...</td></tr>';
-  try {
-    const r = await api('/api/leads');
-    tbody.innerHTML = r.leads.length === 0
-      ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No leads yet. Search Apollo first.</td></tr>'
-      : r.leads.map(l => `<tr>
+    // ────────────────────────────────
+    // LEADS TABLE
+    // ────────────────────────────────
+    async function loadLeads() {
+      const tbody = document.getElementById('leads-tbody');
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">Loading...</td></tr>';
+      try {
+        const r = await api('/api/leads');
+        tbody.innerHTML = r.leads.length === 0
+          ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No leads yet. Search Apollo first.</td></tr>'
+          : r.leads.map(l => `<tr>
           <td>${l.email}</td>
-          <td>${l.first||''} ${l.last||''}</td>
-          <td>${l.company||''}</td>
-          <td style="color:var(--muted)">${l.role||''}</td>
-          <td style="color:var(--muted)">${l.location||''}</td>
-          <td style="color:var(--muted)">${l.industry||''}</td>
+          <td>${l.first || ''} ${l.last || ''}</td>
+          <td>${l.company || ''}</td>
+          <td style="color:var(--muted)">${l.role || ''}</td>
+          <td style="color:var(--muted)">${l.location || ''}</td>
+          <td style="color:var(--muted)">${l.industry || ''}</td>
           <td><span class="status-badge ${l.status}">${l.status}</span></td>
         </tr>`).join('');
-  } catch(e) { toast(e.message, 'error'); }
-}
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-// ────────────────────────────────
-// OUTBOX
-// ────────────────────────────────
-async function loadOutbox() {
-  const tbody = document.getElementById('outbox-tbody');
-  try {
-    const r = await api('/api/outbox');
-    tbody.innerHTML = r.outbox.length === 0
-      ? '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">No emails in outbox yet.</td></tr>'
-      : r.outbox.map(l => `<tr>
+    // ────────────────────────────────
+    // OUTBOX
+    // ────────────────────────────────
+    async function loadOutbox() {
+      const tbody = document.getElementById('outbox-tbody');
+      try {
+        const r = await api('/api/outbox');
+        tbody.innerHTML = r.outbox.length === 0
+          ? '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">No emails in outbox yet.</td></tr>'
+          : r.outbox.map(l => `<tr>
           <td>${l.email}</td>
-          <td>${l.company||''}</td>
-          <td style="color:var(--muted)">${l.role||''}</td>
+          <td>${l.company || ''}</td>
+          <td style="color:var(--muted)">${l.role || ''}</td>
           <td><span class="status-badge ${l.status}">${l.status}</span></td>
-          <td style="color:var(--muted);font-size:12px">${l.sent_from||'—'}</td>
+          <td style="color:var(--muted);font-size:12px">${l.sent_from || '—'}</td>
           <td style="color:var(--muted);font-size:12px">${l.sent_at ? new Date(l.sent_at).toLocaleTimeString() : '—'}</td>
         </tr>`).join('');
-  } catch(e) {}
-}
+      } catch (e) { }
+    }
 
-async function startSending() {
-  const btn = document.getElementById('send-btn');
-  const limit = parseInt(document.getElementById('daily-limit').value) || 5;
-  const delay = parseInt(document.getElementById('email-delay').value) || 65;
-  btn.innerHTML = '<span class="spinner"></span> Sending...';
-  btn.disabled = true;
-  try {
-    await api('/api/send', 'POST', { daily_limit: limit, delay_seconds: delay });
-    toast(`Sending started — up to ${limit} emails`, 'success');
-    setTimeout(() => { loadOutbox(); refreshStats(); }, 3000);
-  } catch(e) {
-    toast('Send failed: ' + e.message, 'error');
-  } finally {
-    setTimeout(() => { btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Send Emails'; btn.disabled = false; }, 2000);
-  }
-}
+    async function startSending() {
+      const btn = document.getElementById('send-btn');
+      const limit = parseInt(document.getElementById('daily-limit').value) || 5;
+      const delay = parseInt(document.getElementById('email-delay').value) || 65;
+      btn.innerHTML = '<span class="spinner"></span> Sending...';
+      btn.disabled = true;
+      try {
+        await api('/api/send', 'POST', { daily_limit: limit, delay_seconds: delay });
+        toast(`Sending started — up to ${limit} emails`, 'success');
+        setTimeout(() => { loadOutbox(); refreshStats(); }, 3000);
+      } catch (e) {
+        toast('Send failed: ' + e.message, 'error');
+      } finally {
+        setTimeout(() => { btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg> Send Emails'; btn.disabled = false; }, 2000);
+      }
+    }
 
-// ────────────────────────────────
-// EMAIL PREVIEW
-// ────────────────────────────────
-async function previewEmail() {
-  const btn = document.getElementById('preview-btn');
-  btn.innerHTML = '<span class="spinner"></span> Generating...';
-  btn.disabled = true;
-  try {
-    const lead = {
-      first: document.getElementById('prev-first').value || 'John',
-      company: document.getElementById('prev-company').value || 'Acme Corp',
-      role: document.getElementById('prev-role').value || 'CTO',
-      industry: document.getElementById('prev-industry').value || 'Technology',
-      location: document.getElementById('prev-location').value || 'India',
-    };
-    const res = await api('/api/generate-preview', 'POST', lead);
-    document.getElementById('preview-subject').textContent = '📧 ' + res.subject;
-    document.getElementById('preview-content').innerHTML = res.bodyHtml;
-    document.getElementById('preview-modal').classList.add('open');
-  } catch(e) {
-    toast('Preview failed: ' + e.message, 'error');
-  } finally {
-    btn.innerHTML = 'Generate Preview';
-    btn.disabled = false;
-  }
-}
+    // ────────────────────────────────
+    // EMAIL PREVIEW
+    // ────────────────────────────────
+    async function previewEmail() {
+      const btn = document.getElementById('preview-btn');
+      btn.innerHTML = '<span class="spinner"></span> Generating...';
+      btn.disabled = true;
+      try {
+        const lead = {
+          first: document.getElementById('prev-first').value || 'John',
+          company: document.getElementById('prev-company').value || 'Acme Corp',
+          role: document.getElementById('prev-role').value || 'CTO',
+          industry: document.getElementById('prev-industry').value || 'Technology',
+          location: document.getElementById('prev-location').value || 'India',
+        };
+        const res = await api('/api/generate-preview', 'POST', lead);
+        document.getElementById('preview-subject').textContent = '📧 ' + res.subject;
+        document.getElementById('preview-content').innerHTML = res.bodyHtml;
+        document.getElementById('preview-modal').classList.add('open');
+      } catch (e) {
+        toast('Preview failed: ' + e.message, 'error');
+      } finally {
+        btn.innerHTML = 'Generate Preview';
+        btn.disabled = false;
+      }
+    }
 
-function closeModal() { document.getElementById('preview-modal').classList.remove('open'); }
+    function closeModal() { document.getElementById('preview-modal').classList.remove('open'); }
 
-// ────────────────────────────────
-// REPLIES
-// ────────────────────────────────
-async function loadReplies() {
-  const tbody = document.getElementById('replies-tbody');
-  try {
-    const r = await api('/api/replies');
-    tbody.innerHTML = r.replies.length === 0
-      ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No replies yet.</td></tr>'
-      : r.replies.map(rep => `<tr>
+    // ────────────────────────────────
+    // REPLIES
+    // ────────────────────────────────
+    async function loadReplies() {
+      const tbody = document.getElementById('replies-tbody');
+      try {
+        const r = await api('/api/replies');
+        tbody.innerHTML = r.replies.length === 0
+          ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No replies yet.</td></tr>'
+          : r.replies.map(rep => `<tr>
           <td>${rep.from}</td>
-          <td>${rep.subject||''}</td>
-          <td style="font-size:12px;color:var(--muted)">${rep.inbox||''}</td>
-          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rep.body||''}</td>
+          <td>${rep.subject || ''}</td>
+          <td style="font-size:12px;color:var(--muted)">${rep.inbox || ''}</td>
+          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rep.body || ''}</td>
           <td style="font-size:12px;color:var(--muted)">${rep.timestamp ? new Date(rep.timestamp).toLocaleString() : ''}</td>
         </tr>`).join('');
-  } catch(e) {}
-}
-
-async function checkReplies() {
-  const btn = document.getElementById('check-replies-btn');
-  if(btn) { btn.innerHTML = '<span class="spinner"></span> Checking...'; btn.disabled = true; }
-  try {
-    const r = await api('/api/check-replies', 'POST');
-    toast(`${r.new_replies} new replies. Auto-replied to ${r.auto_replied}.`, 'success');
-    loadReplies();
-    refreshStats();
-  } catch(e) {
-    toast('Reply check failed: ' + e.message, 'error');
-  } finally {
-    if(btn) { btn.innerHTML = 'Check All Inboxes'; btn.disabled = false; }
-  }
-}
-
-// ────────────────────────────────
-// INBOXES
-// ────────────────────────────────
-async function loadInboxes() {
-  const grid = document.getElementById('inbox-grid');
-  try {
-    const r = await api('/api/o365/status');
-    if (!r.configured || r.count === 0) {
-      grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No inboxes configured yet. Add them in Settings.</div>';
-      return;
+      } catch (e) { }
     }
-    grid.innerHTML = r.accounts.map(a => `
+
+    async function checkReplies() {
+      const btn = document.getElementById('check-replies-btn');
+      if (btn) { btn.innerHTML = '<span class="spinner"></span> Checking...'; btn.disabled = true; }
+      try {
+        const r = await api('/api/check-replies', 'POST');
+        toast(`${r.new_replies} new replies. Auto-replied to ${r.auto_replied}.`, 'success');
+        loadReplies();
+        refreshStats();
+      } catch (e) {
+        toast('Reply check failed: ' + e.message, 'error');
+      } finally {
+        if (btn) { btn.innerHTML = 'Check All Inboxes'; btn.disabled = false; }
+      }
+    }
+
+    // ────────────────────────────────
+    // INBOXES
+    // ────────────────────────────────
+    async function loadInboxes() {
+      const grid = document.getElementById('inbox-grid');
+      try {
+        const r = await api('/api/o365/status');
+        if (!r.configured || r.count === 0) {
+          grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No inboxes configured yet. Add them in Settings.</div>';
+          return;
+        }
+        grid.innerHTML = r.accounts.map(a => `
       <div class="inbox-card connected" id="inbox-card-${a.index}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
@@ -987,103 +1597,104 @@ async function loadInboxes() {
         </div>
         <button class="btn btn-ghost btn-sm" onclick="testInbox(${a.index})">Test Connection</button>
       </div>`).join('');
-  } catch(e) { grid.innerHTML = '<div style="color:var(--danger)">Failed to load inboxes</div>'; }
-}
+      } catch (e) { grid.innerHTML = '<div style="color:var(--danger)">Failed to load inboxes</div>'; }
+    }
 
-async function testInbox(idx) {
-  const badge = document.getElementById('inbox-status-' + idx);
-  badge.textContent = '...';
-  try {
-    const r = await api('/api/o365/test/' + idx, 'POST');
-    badge.textContent = r.ok ? '✓ OK' : '✗ Fail';
-    badge.className = 'badge ' + (r.ok ? 'green' : '');
-    toast(r.message, r.ok ? 'success' : 'error');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function testInbox(idx) {
+      const badge = document.getElementById('inbox-status-' + idx);
+      badge.textContent = '...';
+      try {
+        const r = await api('/api/o365/test/' + idx, 'POST');
+        badge.textContent = r.ok ? '✓ OK' : '✗ Fail';
+        badge.className = 'badge ' + (r.ok ? 'green' : '');
+        toast(r.message, r.ok ? 'success' : 'error');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-async function testAllInboxes() {
-  try {
-    const r = await api('/api/o365/test-all', 'POST');
-    r.results.forEach((res, i) => {
-      const badge = document.getElementById('inbox-status-' + i);
-      if (badge) { badge.textContent = res.ok ? '✓ OK' : '✗ Fail'; badge.className = 'badge ' + (res.ok ? 'green' : ''); }
-    });
-    const ok = r.results.filter(r => r.ok).length;
-    toast(`${ok}/${r.results.length} inboxes connected`, ok === r.results.length ? 'success' : 'info');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function testAllInboxes() {
+      try {
+        const r = await api('/api/o365/test-all', 'POST');
+        r.results.forEach((res, i) => {
+          const badge = document.getElementById('inbox-status-' + i);
+          if (badge) { badge.textContent = res.ok ? '✓ OK' : '✗ Fail'; badge.className = 'badge ' + (res.ok ? 'green' : ''); }
+        });
+        const ok = r.results.filter(r => r.ok).length;
+        toast(`${ok}/${r.results.length} inboxes connected`, ok === r.results.length ? 'success' : 'info');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-// ────────────────────────────────
-// SETTINGS
-// ────────────────────────────────
-function initSettings() {
-  const rows = document.getElementById('o365-rows');
-  if (!rows.innerHTML.trim()) {
-    rows.innerHTML = Array.from({length:5}, (_,i) => `
+    // ────────────────────────────────
+    // SETTINGS
+    // ────────────────────────────────
+    function initSettings() {
+      const rows = document.getElementById('o365-rows');
+      if (!rows.innerHTML.trim()) {
+        rows.innerHTML = Array.from({ length: 5 }, (_, i) => `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;">INBOX ${i+1}</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;">INBOX ${i + 1}</div>
         <input type="email" placeholder="email@cyberarcmsp.com" id="o365-email-${i}" style="margin-bottom:6px;">
         <input type="password" placeholder="App password (16 chars)" id="o365-pass-${i}" style="margin-bottom:6px;">
         <input type="text" placeholder="Display name" id="o365-name-${i}" style="margin-bottom:6px;">
         <button class="btn btn-ghost btn-sm" onclick="testO365Row(${i})" style="width:100%;justify-content:center;">Test</button>
       </div>`).join('');
-  }
-}
+      }
+    }
 
-async function testO365Row(i) {
-  const email = document.getElementById('o365-email-' + i).value;
-  const password = document.getElementById('o365-pass-' + i).value;
-  const name = document.getElementById('o365-name-' + i).value;
-  if (!email || !password) { toast('Enter email and password first', 'error'); return; }
-  try {
-    const r = await api('/api/settings', 'POST', { accounts: [{ email, password, name }] });
-    const t = await api('/api/o365/test/0', 'POST');
-    toast(t.message, t.ok ? 'success' : 'error');
-  } catch(e) { toast(e.message, 'error'); }
-}
+    async function testO365Row(i) {
+      const email = document.getElementById('o365-email-' + i).value;
+      const password = document.getElementById('o365-pass-' + i).value;
+      const name = document.getElementById('o365-name-' + i).value;
+      if (!email || !password) { toast('Enter email and password first', 'error'); return; }
+      try {
+        const r = await api('/api/settings', 'POST', { accounts: [{ email, password, name }] });
+        const t = await api('/api/o365/test/0', 'POST');
+        toast(t.message, t.ok ? 'success' : 'error');
+      } catch (e) { toast(e.message, 'error'); }
+    }
 
-async function saveO365Settings() {
-  const accounts = [];
-  for (let i = 0; i < 5; i++) {
-    const email = document.getElementById('o365-email-' + i)?.value;
-    const password = document.getElementById('o365-pass-' + i)?.value;
-    const name = document.getElementById('o365-name-' + i)?.value;
-    if (email && password) accounts.push({ email, password, name: name || email.split('@')[0] });
-  }
-  if (!accounts.length) { toast('Add at least one inbox', 'error'); return; }
-  try {
-    const r = await api('/api/settings', 'POST', { accounts });
-    toast(`${r.inboxes} inbox${r.inboxes!==1?'es':''} saved`, 'success');
+    async function saveO365Settings() {
+      const accounts = [];
+      for (let i = 0; i < 5; i++) {
+        const email = document.getElementById('o365-email-' + i)?.value;
+        const password = document.getElementById('o365-pass-' + i)?.value;
+        const name = document.getElementById('o365-name-' + i)?.value;
+        if (email && password) accounts.push({ email, password, name: name || email.split('@')[0] });
+      }
+      if (!accounts.length) { toast('Add at least one inbox', 'error'); return; }
+      try {
+        const r = await api('/api/settings', 'POST', { accounts });
+        toast(`${r.inboxes} inbox${r.inboxes !== 1 ? 'es' : ''} saved`, 'success');
+        refreshStats();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    async function saveSettings() {
+      const body = {};
+      const groq = document.getElementById('s-groq').value;
+      const or = document.getElementById('s-openrouter').value;
+      const ap = document.getElementById('s-apollo').value;
+      const cal = document.getElementById('s-calendly').value;
+      const sn = document.getElementById('s-sender-name').value;
+      const st = document.getElementById('s-sender-title').value;
+      if (groq) body.groq_key = groq;
+      if (or) body.openrouter_key = or;
+      if (ap) body.apollo_key = ap;
+      if (cal) body.calendly_url = cal;
+      if (sn) body.sender_name = sn;
+      if (st) body.sender_title = st;
+      try {
+        await api('/api/settings', 'POST', body);
+        toast('Settings saved', 'success');
+        refreshStats();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ────────────────────────────────
+    // INIT
+    // ────────────────────────────────
     refreshStats();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-async function saveSettings() {
-  const body = {};
-  const groq = document.getElementById('s-groq').value;
-  const or = document.getElementById('s-openrouter').value;
-  const ap = document.getElementById('s-apollo').value;
-  const cal = document.getElementById('s-calendly').value;
-  const sn = document.getElementById('s-sender-name').value;
-  const st = document.getElementById('s-sender-title').value;
-  if (groq) body.groq_key = groq;
-  if (or) body.openrouter_key = or;
-  if (ap) body.apollo_key = ap;
-  if (cal) body.calendly_url = cal;
-  if (sn) body.sender_name = sn;
-  if (st) body.sender_title = st;
-  try {
-    await api('/api/settings', 'POST', body);
-    toast('Settings saved', 'success');
-    refreshStats();
-  } catch(e) { toast(e.message, 'error'); }
-}
-
-// ────────────────────────────────
-// INIT
-// ────────────────────────────────
-refreshStats();
-setInterval(refreshStats, 30000);
-</script>
+    setInterval(refreshStats, 30000);
+  </script>
 </body>
+
 </html>

@@ -9,6 +9,8 @@ import json
 import os
 import re
 import time
+from dotenv import load_dotenv
+
 import imaplib
 import smtplib
 import email as email_lib
@@ -29,6 +31,7 @@ from pydantic import BaseModel
 # ─────────────────────────────────────────────
 # CONFIG  (override via .env or environment)
 # ─────────────────────────────────────────────
+load_dotenv()
 
 def env(key, default=""):
     return os.environ.get(key, default)
@@ -313,7 +316,7 @@ class O365Inbox:
         msg["To"]      = to
         msg.attach(MIMEText(plain, "plain"))
         msg.attach(MIMEText(html, "html"))
-        with smtplib.SMTP("smtp.office365.com", 587, timeout=30) as smtp:
+        with smtplib.SMTP("smtp-mail.outlook.com", 587, timeout=30) as smtp:
             smtp.ehlo()
             smtp.starttls()
             smtp.login(self.email, self.password)
@@ -322,7 +325,7 @@ class O365Inbox:
 
     def test_connection(self) -> dict:
         try:
-            with smtplib.SMTP("smtp.office365.com", 587, timeout=10) as smtp:
+            with smtplib.SMTP("smtp-mail.outlook.com", 587, timeout=10) as smtp:
                 smtp.ehlo()
                 smtp.starttls()
                 smtp.login(self.email, self.password)
@@ -430,14 +433,13 @@ def normalise_locations(locs: list[str]) -> list[str]:
     return list(dict.fromkeys(result))
 
 async def apollo_search(titles: list[str], industry: str, locations: list[str],
-                        seniority: list[str], per_page: int = 25) -> list[dict]:
+                        company_sizes: list[str], per_page: int = 25) -> list[dict]:
     mapped_industry = INDUSTRY_MAP.get(industry.lower().strip(), industry)
     norm_locs = normalise_locations(locations)
 
     payload = {
-        "api_key": APOLLO_KEY,
         "person_titles": titles,
-        "person_seniority_tags": seniority or ["c_suite", "vp", "director"],
+        "organization_num_employees_ranges": company_sizes,
         "person_locations": norm_locs,
         "organization_locations": norm_locs,
         "q_organization_industries": [mapped_industry],
@@ -448,9 +450,13 @@ async def apollo_search(titles: list[str], industry: str, locations: list[str],
     }
     async with httpx.AsyncClient(timeout=30) as client:
         r = await client.post(
-            "https://api.apollo.io/v1/mixed_people/search",
+            "https://api.apollo.io/v1/mixed_people/api_search",
             json=payload,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Cache-Control": "no-cache",
+                "X-Api-Key": APOLLO_KEY
+            },
         )
         r.raise_for_status()
         data = r.json()
@@ -497,7 +503,7 @@ class ApolloQuery(BaseModel):
     titles: list[str]
     industry: str
     locations: list[str]
-    seniority: list[str] = []
+    company_sizes: list[str] = []
     per_page: int = 25
 
 class SendRequest(BaseModel):
@@ -548,7 +554,7 @@ def stats():
 async def search_apollo(q: ApolloQuery):
     if not APOLLO_KEY:
         raise HTTPException(400, "Apollo API key not configured")
-    results = await apollo_search(q.titles, q.industry, q.locations, q.seniority, q.per_page)
+    results = await apollo_search(q.titles, q.industry, q.locations, q.company_sizes, q.per_page)
     # Add to leads_db (dedupe by email)
     existing = {l["email"] for l in leads_db}
     new_leads = [r for r in results if r["email"] not in existing]
