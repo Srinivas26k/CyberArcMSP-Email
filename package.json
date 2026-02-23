@@ -7,23 +7,23 @@
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
-    "start":  "electron .",
-    "dist":   "electron-builder --config",
-    "dist:win":   "electron-builder --win",
-    "dist:mac":   "electron-builder --mac",
+    "start": "electron .",
+    "dist": "electron-builder --config",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux"
   },
   "devDependencies": {
-    "electron":         "^29.0.0",
+    "electron": "^29.0.0",
     "electron-builder": "^24.0.0"
   },
   "build": {
-    "appId":       "com.cyberarcmsp.outreach",
+    "appId": "com.cyberarcmsp.outreach",
     "productName": "CyberArc Outreach",
-    "copyright":   "© 2026 CyberArc MSP",
+    "copyright": "© 2026 CyberArc MSP",
     "directories": {
       "buildResources": "build",
-      "output":         "dist"
+      "output": "dist"
     },
     "files": [
       "electron/**/*",
@@ -33,7 +33,7 @@
     "extraResources": [
       {
         "from": ".",
-        "to":   "app",
+        "to": "app",
         "filter": [
           "*.py",
           "pyproject.toml",
@@ -53,28 +53,54 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis",    "arch": ["x64"] },
-        { "target": "portable","arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico"
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
-      "icon": "build/icon.icns",
+      "icon": "build/icon.png",
       "category": "public.app-category.business"
     },
     "linux": {
       "target": [
-        { "target": "AppImage", "arch": ["x64"] },
-        { "target": "deb",      "arch": ["x64"] }
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icons",
       "category": "Office"
     },
     "nsis": {
-      "oneClick":          false,
+      "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
