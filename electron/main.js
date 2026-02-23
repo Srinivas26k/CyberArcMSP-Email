@@ -12,7 +12,7 @@ const path = require('path');
 const http = require('http');
 
 const SERVER_PORT = 8002;
-const SERVER_URL  = `http://localhost:${SERVER_PORT}`;
+const SERVER_URL = `http://localhost:${SERVER_PORT}`;
 
 let mainWindow = null;
 let serverProcess = null;
@@ -25,7 +25,7 @@ function startServer() {
   const projectDir = path.join(__dirname, '..');
 
   // Use `uv run` so it picks up the virtual-env automatically
-  const cmd  = process.platform === 'win32' ? 'uv.exe' : 'uv';
+  const cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
   const args = [
     'run', 'uvicorn', 'main:app',
     '--host', '127.0.0.1',
@@ -85,7 +85,7 @@ function waitForServer(retries = 30, intervalMs = 1000) {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width:  1400,
+    width: 1400,
     height: 900,
     minWidth: 900,
     minHeight: 600,
@@ -107,10 +107,24 @@ function createWindow() {
     mainWindow.focus();
   });
 
-  // Open external links in the system browser
+  // Open external links in the system browser (window.open AND <a href>)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
+  });
+
+  // Intercept normal <a href> link navigations to external URLs
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith(SERVER_URL)) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+
+  // Same for newly created windows (e.g. target="_blank")
+  mainWindow.webContents.on('new-window', (event, url) => {
+    event.preventDefault();
+    shell.openExternal(url);
   });
 
   mainWindow.on('closed', () => {

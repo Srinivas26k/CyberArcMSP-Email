@@ -1673,24 +1673,40 @@
       const industry = document.getElementById('industry-input').value.trim();
       const perPage = parseInt(document.getElementById('per-page-input').value) || 25;
       const seniorityEl = document.getElementById('seniority-input');
-      const seniority = Array.from(seniorityEl.selectedOptions).map(o => o.value);
+      const seniority = seniorityEl ? seniorityEl.value.split(',').filter(Boolean) : [];
 
       if (!titles.length) { toast('Add at least one job title', 'error'); return; }
       if (!industry) { toast('Enter an industry', 'error'); return; }
       if (!locations.length) { toast('Add at least one location', 'error'); return; }
 
+      const resultsEl = document.getElementById('search-results');
       btn.innerHTML = '<span class="spinner"></span> Searching Apollo...';
       btn.disabled = true;
-      document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;"><div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div><div>Searching Apollo.io...</div></div>';
+      resultsEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;"><div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div><div>Searching Apollo.io — this may take 15-30 seconds...</div></div>';
 
       try {
         const res = await api('/api/apollo/search', 'POST', { titles, industry, locations, target_count: perPage });
-        renderSearchResults(res.leads || []);
-        toast(`Found ${res.found} leads (${res.added} new added)`, 'success');
-        document.getElementById('search-actions').style.display = 'flex';
+        const leads = res.leads || [];
+        if (!leads.length) {
+          resultsEl.innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;">No leads found. Try broader job titles, a different industry, or fewer filters.</div>';
+        } else {
+          renderSearchResults(leads);
+          toast(`Found ${res.found} leads, ${res.added} new added to DB`, 'success');
+          document.getElementById('search-actions').style.display = 'flex';
+        }
       } catch (e) {
-        toast('Apollo search failed: ' + e.message, 'error');
-        document.getElementById('search-results').innerHTML = `<div style="text-align:center;color:var(--danger);padding:60px 0;">${e.message}</div>`;
+        const msg = e.message || 'Unknown error';
+        resultsEl.innerHTML = `
+          <div style="padding:28px 24px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:10px;margin:16px;">
+            <div style="font-weight:700;color:var(--danger);font-size:15px;margin-bottom:8px">⚠️ Apollo Search Failed</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.7;word-break:break-all;">${msg}</div>
+            <ul style="margin-top:14px;font-size:12px;color:var(--muted);padding-left:18px;line-height:2;">
+              <li>Make sure your <strong>Apollo API key</strong> is set in Settings</li>
+              <li>Check you have Apollo credits remaining</li>
+              <li>Reduce the result count (try 5 or 10)</li>
+              <li>Try a broader industry term (e.g. "Tech" instead of "SaaS")</li>
+            </ul>
+          </div>`;
       } finally {
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Search Apollo';
         btn.disabled = false;
