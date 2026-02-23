@@ -114,7 +114,7 @@ TODAY: {today_str}
 INDUSTRY HOOK: {ctx['hook']}
 COMPLIANCE ANGLE: {ctx['risk']}
 
-AVAILABLE SERVICES WE CAN OFFER THEM:
+CYBERARC MSP SERVICES SELECTED FOR THIS LEAD:
 {ctx['services_text']}
 
 WRITING MISSION:
@@ -122,8 +122,12 @@ Write a consultative B2B cold email (160–200 words body). Rules:
 1. Open with "Hi {lead.get('first_name', 'there')},"
 2. HOOK: One sharp observation about their industry + location in {year} (no filler).
 3. PAIN: Frame as "As [Role], you're balancing X with Y. What we see is [specific problem]."
-4. Use exactly this phrase: "Three ways we help:"
-5. LIST: <ul><li><strong>Pillar Header:</strong> One-sentence description with a metric.</li></ul> — exactly 3 items, 50% tech + 50% risk/compliance angle spread.
+4. Use exactly this phrase: "Three ways CyberArc MSP helps:"
+5. LIST: <ul><li><strong>[Named CyberArc Service]:</strong> One-sentence description with a metric.</li></ul>
+   — exactly 3 items. Use the service names from CYBERARC MSP SERVICES above as the <strong> headers
+   (e.g. <strong>SOC/NOC Monitoring:</strong>, <strong>Zero Trust Identity:</strong>, <strong>GRC Advisory:</strong>).
+   Do NOT use generic headers like "Pillar 1" or "Tech Solution". Use real CyberArc service names.
+   50% tech + 50% risk/compliance angle spread across the 3 items.
 6. Proof: One line referencing similar clients or a benchmark result.
 7. CTA: End with "Open for 15 minutes this week?" followed by a new line "Best,"
 8. NO closing name — signature is appended by the system.

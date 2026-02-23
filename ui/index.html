@@ -9,6 +9,7 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap"
     rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <style>
     :root {
       --bg: #f8fafc;
@@ -678,6 +679,139 @@
       margin-bottom: 20px;
     }
 
+    /* LEAD DETAIL DRAWER */
+    .drawer-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .35);
+      z-index: 300;
+      display: none;
+    }
+
+    .drawer-overlay.open {
+      display: block;
+    }
+
+    .lead-drawer {
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 420px;
+      height: 100vh;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 301;
+      transform: translateX(100%);
+      transition: transform .25s ease;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .lead-drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    .drawer-body {
+      padding: 24px;
+      flex: 1;
+    }
+
+    .drawer-field {
+      margin-bottom: 16px;
+    }
+
+    .drawer-field label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .drawer-field .val {
+      font-size: 14px;
+      color: var(--text);
+      font-weight: 500;
+      word-break: break-all;
+    }
+
+    .drawer-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 16px 0;
+    }
+
+    /* DRAG HANDLE */
+    .drag-handle {
+      cursor: grab;
+      color: var(--muted);
+      padding: 0 6px;
+      font-size: 14px;
+      user-select: none;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    /* CHECKBOX COL */
+    .cb-cell {
+      width: 36px;
+      text-align: center;
+    }
+
+    input[type=checkbox] {
+      width: auto;
+      cursor: pointer;
+    }
+
+    /* DOWNLOAD CARD */
+    .download-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+
+    .download-card-icon {
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .download-card-info {
+      flex: 1;
+    }
+
+    .download-card-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .download-card-desc {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
     /* LOADING SPINNER */
     .spinner {
       width: 20px;
@@ -796,7 +930,7 @@
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
           <polyline points="22,6 12,13 2,6" />
         </svg>
-        O365 Inboxes
+        Sender Accounts
       </a>
       <a class="nav-item" onclick="showPage('settings')" href="#">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -805,6 +939,14 @@
             d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
         </svg>
         Settings
+      </a>
+      <a class="nav-item" onclick="showPage('records')" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Records &amp; Backup
       </a>
     </nav>
     <div class="status-bar" id="system-status">
@@ -888,7 +1030,7 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                 </svg>
-                Manage O365 Inboxes
+                Manage Sender Accounts
               </button>
             </div>
           </div>
@@ -956,15 +1098,8 @@
                     onkeydown="addTag(event,'locations')">
                 </div>
               </div>
-              <div class="form-group">
-                <label>Seniority</label>
-                <select id="seniority-input" multiple style="height:90px;">
-                  <option value="c_suite" selected>C-Suite (CEO, CTO, CISO)</option>
-                  <option value="vp" selected>VP Level</option>
-                  <option value="director" selected>Director</option>
-                  <option value="manager">Manager</option>
-                </select>
-              </div>
+              <!-- Seniority hidden - fixed defaults used server-side: c_suite, vp, director -->
+              <input type="hidden" id="seniority-input" value="c_suite,vp,director">
               <div class="form-group">
                 <label>Results per page</label>
                 <input type="number" id="per-page-input" value="25" min="5" max="100">
@@ -1009,6 +1144,7 @@
                 ⬆ CSV <input type="file" accept=".csv" style="display:none" onchange="uploadCSV(this)">
               </label>
               <button class="btn btn-ghost btn-sm" onclick="loadLeads()">Refresh</button>
+              <a href="/api/leads/export" download class="btn btn-ghost btn-sm">⬇ Export CSV</a>
               <button class="btn btn-danger btn-sm" onclick="deleteAllLeads()">Clear All</button>
             </div>
           </div>
@@ -1094,13 +1230,20 @@
           <div class="panel" style="overflow:hidden;">
             <div class="panel-header">
               <span class="panel-title">Outbox Queue</span>
-              <button class="btn btn-ghost btn-sm" onclick="loadOutbox()">Refresh</button>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <span id="selected-count" style="font-size:12px;color:var(--muted);">0 selected</span>
+                <button class="btn btn-ghost btn-sm" onclick="loadOutbox()">Refresh</button>
+                <a href="/api/campaigns/export" download class="btn btn-ghost btn-sm">⬇ Export</a>
+              </div>
             </div>
             <div class="panel-body" style="padding:0;">
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
+                      <th class="cb-cell"><input type="checkbox" id="select-all-cb" onchange="toggleSelectAll(this)">
+                      </th>
+                      <th style="width:24px;"></th>
                       <th>Email</th>
                       <th>Company</th>
                       <th>Role</th>
@@ -1152,7 +1295,7 @@
       <div class="content">
         <div class="panel" style="margin-bottom:20px;">
           <div class="panel-header">
-            <span class="panel-title">📬 O365 Inboxes (IMAP enabled, SMTP AUTH enabled)</span>
+            <span class="panel-title">📬 Sender Accounts (IMAP enabled, SMTP AUTH enabled)</span>
             <button class="btn btn-success btn-sm" onclick="testAllInboxes()">Test All Connections</button>
           </div>
           <div class="panel-body">
@@ -1268,6 +1411,98 @@
     </div>
   </main>
 
+  <!-- ═══════════════ RECORDS & BACKUP ═══════════════ -->
+  <div id="page-records" class="page" style="margin-left:220px;">
+    <div class="content">
+      <div style="margin-bottom:24px;">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:6px;">Records &amp;
+          Backup</div>
+        <p style="font-size:13px;color:var(--muted);">Download your data at any time for record-keeping, compliance, or
+          migration to a new machine. Backups are your safety net.</p>
+      </div>
+
+      <div class="panel-grid">
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">📥 Export Records (CSV)</span></div>
+          <div class="panel-body" style="display:flex;flex-direction:column;gap:0;">
+
+            <div class="download-card">
+              <div class="download-card-icon">👥</div>
+              <div class="download-card-info">
+                <div class="download-card-title">All Leads</div>
+                <div class="download-card-desc">Every contact in your database — name, email, company, role, industry,
+                  location, status. Perfect for importing into another tool or sharing with your team.</div>
+              </div>
+              <a href="/api/leads/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇ Download</a>
+            </div>
+
+            <div class="download-card">
+              <div class="download-card-icon">📤</div>
+              <div class="download-card-info">
+                <div class="download-card-title">Sent Campaigns</div>
+                <div class="download-card-desc">A log of every email sent — which lead received it, what email account
+                  sent it, the subject line, timestamp, and any errors. Essential for compliance and outreach auditing.
+                </div>
+              </div>
+              <a href="/api/campaigns/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇
+                Download</a>
+            </div>
+
+            <div class="download-card">
+              <div class="download-card-icon">💬</div>
+              <div class="download-card-info">
+                <div class="download-card-title">Replies Received</div>
+                <div class="download-card-desc">All inbound replies detected by the system — sender, subject, preview
+                  snippet, and which inbox received it. Use this to track engagement over time.</div>
+              </div>
+              <a href="/api/replies/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇ Download</a>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">🗄️ Database Backup (.db)</span></div>
+          <div class="panel-body">
+            <div
+              style="padding:16px;background:rgba(0,112,243,.06);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:16px;">
+              <div style="font-weight:600;font-size:14px;margin-bottom:8px;">What is the database backup?</div>
+              <p style="font-size:13px;color:var(--muted);line-height:1.7;">
+                The app stores <em>everything</em> — leads, campaigns, replies, email accounts, and settings — in a
+                single SQLite file called <code
+                  style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">database.db</code>.<br><br>
+                Downloading this file gives you a <strong>complete snapshot</strong> of the entire system at that
+                moment. If you ever reinstall the app, move to a new computer, or the data gets corrupted, you can
+                <strong>restore this file</strong> to pick up exactly where you left off.
+              </p>
+            </div>
+            <div
+              style="padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--muted);">
+              ⚠️ <strong>Tip:</strong> Download a backup before making bulk changes or clearing leads. Store it in
+              Google Drive or Dropbox for safekeeping.
+            </div>
+            <a href="/api/db/backup" download class="btn btn-primary"
+              style="width:100%;justify-content:center;font-size:14px;padding:12px;">
+              🗄️ Download Full Database Backup
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEAD DETAIL DRAWER -->
+  <div class="drawer-overlay" id="lead-drawer-overlay" onclick="closeLeadDrawer()"></div>
+  <div class="lead-drawer" id="lead-drawer">
+    <div class="drawer-header">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;">Lead Details</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeLeadDrawer()">✕ Close</button>
+    </div>
+    <div class="drawer-body" id="lead-drawer-body">
+      <div style="color:var(--muted);font-size:13px;">Loading...</div>
+    </div>
+  </div>
+
   <!-- EMAIL PREVIEW MODAL -->
   <div class="modal-overlay" id="preview-modal">
     <div class="modal" style="max-width:660px;">
@@ -1297,16 +1532,18 @@
       leads: 'All Leads',
       outbox: 'Send Emails',
       replies: 'Reply Inbox',
-      inboxes: 'O365 Inboxes',
+      inboxes: 'Sender Accounts',
       settings: 'Settings',
+      records: 'Records & Backup',
     };
 
     function showPage(name) {
       document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
       document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('page-' + name).classList.add('active');
+      const pg = document.getElementById('page-' + name);
+      if (pg) pg.classList.add('active');
       document.querySelectorAll('.nav-item').forEach(n => {
-        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(name)) n.classList.add('active');
+        if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + name + "'")) n.classList.add('active');
       });
       document.getElementById('page-title').textContent = pages[name] || name;
       if (name === 'leads') loadLeads();
@@ -1315,6 +1552,12 @@
       if (name === 'inboxes') loadInboxes();
       if (name === 'settings') initSettings();
     }
+
+    // Warn before accidental refresh/close when a campaign is running
+    window.onbeforeunload = () => {
+      const dot = document.getElementById('status-text');
+      if (dot && dot.textContent.includes('running')) return 'A campaign is running. If you reload, it will stop.';
+    };
 
     // ────────────────────────────────
     // TOAST
@@ -1453,22 +1696,26 @@
         document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;">No results found. Try different filters.</div>';
         return;
       }
+      // Store results globally for the detail drawer
+      window._apolloLeads = leads;
       document.getElementById('search-results').innerHTML = `
     <div style="overflow-x:auto;">
     <table style="width:100%;font-size:12px;border-collapse:collapse;">
       <thead><tr>
-        <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Email</th>
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Name</th>
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Company</th>
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Role</th>
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Location</th>
+        <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Industry</th>
+        <th style="padding:8px;border-bottom:1px solid var(--border);"></th>
       </tr></thead>
-      <tbody>${leads.map(l => `<tr style="border-bottom:1px solid rgba(0,0,0,.05);">
-        <td style="padding:8px;">${l.email}</td>
-        <td style="padding:8px;">${l.first_name || l.first || ''} ${l.last_name || l.last || ''}</td>
-        <td style="padding:8px;">${l.company}</td>
-        <td style="padding:8px;color:var(--muted);">${l.role}</td>
-        <td style="padding:8px;color:var(--muted);">${l.location}</td>
+      <tbody>${leads.map((l, i) => `<tr style="border-bottom:1px solid rgba(0,0,0,.05);">
+        <td style="padding:8px;font-weight:500;">${l.first_name || l.first || ''} ${l.last_name || l.last || ''}</td>
+        <td style="padding:8px;">${l.company || '—'}</td>
+        <td style="padding:8px;color:var(--muted);">${l.role || '—'}</td>
+        <td style="padding:8px;color:var(--muted);">${l.location || '—'}</td>
+        <td style="padding:8px;color:var(--muted);">${l.industry || '—'}</td>
+        <td style="padding:8px;text-align:right;"><button class="btn btn-ghost btn-sm" onclick="openLeadDrawer(${i})">Details ›</button></td>
       </tr>`).join('')}</tbody>
     </table>
     </div>`;
@@ -1512,15 +1759,56 @@
     }
 
     // ────────────────────────────────
+    // LEAD DETAIL DRAWER
+    // ────────────────────────────────
+    function openLeadDrawer(idx) {
+      const l = (window._apolloLeads || [])[idx];
+      if (!l) return;
+      const f = (v) => v ? `<span class="val">${v}</span>` : `<span class="val" style="color:var(--muted)">—</span>`;
+      document.getElementById('lead-drawer-body').innerHTML = `
+        <div class="drawer-field"><label>Full Name</label>${f((l.first_name || l.first || '') + ' ' + (l.last_name || l.last || ''))}</div>
+        <div class="drawer-field"><label>Email</label>${f(l.email)}</div>
+        <div class="drawer-field"><label>Company</label>${f(l.company)}</div>
+        <div class="drawer-field"><label>Role / Title</label>${f(l.role)}</div>
+        <hr class="drawer-divider">
+        <div class="drawer-field"><label>Industry</label>${f(l.industry)}</div>
+        <div class="drawer-field"><label>Location</label>${f(l.location)}</div>
+        <div class="drawer-field"><label>Employees</label>${f(l.employees)}</div>
+        <hr class="drawer-divider">
+        ${l.website ? `<div class="drawer-field"><label>Website</label><a href="${l.website}" target="_blank" class="val" style="color:var(--accent);">${l.website}</a></div>` : ''}
+        ${l.linkedin ? `<div class="drawer-field"><label>LinkedIn</label><a href="${l.linkedin}" target="_blank" class="val" style="color:var(--accent);">View Profile</a></div>` : ''}
+        <hr class="drawer-divider">
+        <div class="drawer-field"><label>Status in DB</label>${f(l.status || 'imported')}</div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" onclick="showPage('outbox');closeLeadDrawer();">→ Go to Send Emails</button>
+      `;
+      document.getElementById('lead-drawer-overlay').classList.add('open');
+      document.getElementById('lead-drawer').classList.add('open');
+    }
+
+    function closeLeadDrawer() {
+      document.getElementById('lead-drawer-overlay').classList.remove('open');
+      document.getElementById('lead-drawer').classList.remove('open');
+    }
+
+    // ────────────────────────────────
     // OUTBOX
     // ────────────────────────────────
+    let _selectedLeadIds = new Set();
+    let _outboxSortable = null;
+    let _outboxOrder = [];   // tracks dragged order of lead IDs
+
     async function loadOutbox() {
       const tbody = document.getElementById('outbox-tbody');
       try {
         const r = await api('/api/leads');
-        tbody.innerHTML = r.leads.length === 0
-          ? '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">No emails in outbox yet.</td></tr>'
-          : r.leads.map(l => `<tr>
+        if (r.leads.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--muted);">No emails in outbox yet.</td></tr>';
+          return;
+        }
+        _outboxOrder = r.leads.map(l => l.id);
+        tbody.innerHTML = r.leads.map(l => `<tr data-id="${l.id}">
+          <td class="cb-cell"><input type="checkbox" class="lead-cb" value="${l.id}" ${_selectedLeadIds.has(l.id) ? 'checked' : ''} onchange="toggleLeadCb(this)"></td>
+          <td class="drag-handle" title="Drag to reorder">☰</td>
           <td>${l.email}</td>
           <td>${l.company || ''}</td>
           <td style="color:var(--muted)">${l.role || ''}</td>
@@ -1528,7 +1816,43 @@
           <td style="color:var(--muted);font-size:12px">${l.sent_from || '—'}</td>
           <td style="color:var(--muted);font-size:12px">${l.created_at ? new Date(l.created_at).toLocaleTimeString() : '—'}</td>
         </tr>`).join('');
-      } catch (e) { }
+
+        // Init SortableJS drag-to-reorder
+        if (_outboxSortable) _outboxSortable.destroy();
+        _outboxSortable = Sortable.create(tbody, {
+          handle: '.drag-handle',
+          animation: 150,
+          onEnd: () => {
+            _outboxOrder = Array.from(tbody.querySelectorAll('tr[data-id]')).map(r => parseInt(r.dataset.id));
+            updateSelectedCount();
+          }
+        });
+        updateSelectedCount();
+      } catch (e) { console.error(e); }
+    }
+
+    function toggleLeadCb(cb) {
+      const id = parseInt(cb.value);
+      if (cb.checked) _selectedLeadIds.add(id);
+      else _selectedLeadIds.delete(id);
+      updateSelectedCount();
+    }
+
+    function toggleSelectAll(masterCb) {
+      document.querySelectorAll('.lead-cb').forEach(cb => {
+        cb.checked = masterCb.checked;
+        const id = parseInt(cb.value);
+        if (masterCb.checked) _selectedLeadIds.add(id);
+        else _selectedLeadIds.delete(id);
+      });
+      updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+      const el = document.getElementById('selected-count');
+      if (!el) return;
+      const n = _selectedLeadIds.size;
+      el.textContent = n > 0 ? `${n} selected` : '0 selected (all pending will send)';
     }
 
     async function startSending() {
@@ -1537,9 +1861,17 @@
       const delay = parseInt(document.getElementById('email-delay').value) || 65;
       btn.innerHTML = '<span class="spinner"></span> Sending...';
       btn.disabled = true;
+      // If specific leads are checked, send only those (in dragged order)
+      let lead_ids = [];
+      if (_selectedLeadIds.size > 0) {
+        // Preserve visual drag order
+        lead_ids = _outboxOrder.filter(id => _selectedLeadIds.has(id));
+      }
       try {
-        await api('/api/campaign/start', 'POST', { strategy: 'round_robin', daily_limit: limit, delay_seconds: delay });
-        toast(`Sending started — up to ${limit} emails`, 'success');
+        const body = { strategy: 'round_robin', daily_limit: limit, delay_seconds: delay };
+        if (lead_ids.length) body.lead_ids = lead_ids;
+        await api('/api/campaign/start', 'POST', body);
+        toast(`Sending started — ${lead_ids.length ? lead_ids.length + ' selected' : 'all pending'} leads`, 'success');
         setTimeout(() => { loadOutbox(); refreshStats(); }, 3000);
       } catch (e) {
         toast('Send failed: ' + e.message, 'error');

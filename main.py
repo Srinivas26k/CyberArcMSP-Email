@@ -797,6 +797,107 @@ def save_settings(body: SettingsIn, session: Session = Depends(db.get_session)):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DATA EXPORT & BACKUP
+# ─────────────────────────────────────────────────────────────────────────────
+
+@app.get("/api/leads/export")
+def export_leads_csv(session: Session = Depends(db.get_session)):
+    """Download all leads as a CSV file for record-keeping."""
+    leads = session.exec(select(m.Lead)).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "email", "first_name", "last_name", "company", "role",
+                     "industry", "location", "seniority", "employees", "website",
+                     "linkedin", "status", "created_at"])
+    for l in leads:
+        writer.writerow([
+            l.id, l.email, l.first_name, l.last_name, l.company, l.role,
+            l.industry, l.location, l.seniority, l.employees, l.website,
+            l.linkedin, l.status, l.created_at,
+        ])
+    output.seek(0)
+    filename = f"leads_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/campaigns/export")
+def export_campaigns_csv(session: Session = Depends(db.get_session)):
+    """Download all sent campaign records as CSV."""
+    campaigns = session.exec(select(m.Campaign)).all()
+    leads_map = {l.id: l for l in session.exec(select(m.Lead)).all()}
+    accs_map  = {a.id: a for a in session.exec(select(m.EmailAccount)).all()}
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["campaign_id", "lead_email", "lead_name", "company", "role",
+                     "subject", "sent_from_account", "sent_at", "error"])
+    for c in campaigns:
+        lead = leads_map.get(c.lead_id)
+        acc  = accs_map.get(c.account_id)
+        writer.writerow([
+            c.id,
+            lead.email      if lead else "",
+            f"{lead.first_name} {lead.last_name}".strip() if lead else "",
+            lead.company    if lead else "",
+            lead.role       if lead else "",
+            c.subject       or "",
+            acc.email       if acc else "",
+            c.sent_at       or "",
+            c.error_message or "",
+        ])
+    output.seek(0)
+    filename = f"campaigns_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/replies/export")
+def export_replies_csv(session: Session = Depends(db.get_session)):
+    """Download all replies as CSV."""
+    replies = session.exec(select(m.Reply)).all()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["id", "from_email", "from_name", "subject", "snippet",
+                     "inbox_account", "received_at"])
+    for r in replies:
+        writer.writerow([r.id, r.from_email, r.from_name, r.subject,
+                         r.snippet, r.inbox_account, r.received_at])
+    output.seek(0)
+    filename = f"replies_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.get("/api/db/backup")
+def download_database_backup():
+    """
+    Download the raw SQLite database file.
+    This is the complete backup of all leads, campaigns, replies, accounts and settings.
+    Useful for migrating to a new machine or restoring data after a reinstall.
+    """
+    db_path = os.path.join(os.path.dirname(__file__), "database.db")
+    if not os.path.exists(db_path):
+        raise HTTPException(404, "Database file not found")
+    filename = f"cyberarc_outreach_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    return FileResponse(
+        db_path,
+        media_type="application/octet-stream",
+        filename=filename,
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SERVE FRONTEND
 # ─────────────────────────────────────────────────────────────────────────────
 
