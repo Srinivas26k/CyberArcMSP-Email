@@ -6,7 +6,7 @@
  * ready, then opens the Electron BrowserWindow.
  */
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, Menu, MenuItem } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
@@ -22,7 +22,18 @@ let serverProcess = null;
 // ─────────────────────────────────────────────────────────────────────────────
 
 function startServer() {
-  const projectDir = path.join(__dirname, '..');
+  const isPackaged = app.isPackaged;
+  // In dev: V2 folder. In prod: resources/app where extraResources are extracted.
+  const projectDir = isPackaged
+    ? path.join(process.resourcesPath, 'app')
+    : path.join(__dirname, '..');
+
+  // Ensure 'uv' is accessible even when launched from a GUI shortcut
+  const env = Object.assign({}, process.env);
+  if (process.platform !== 'win32') {
+    const home = process.env.HOME || '';
+    env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
+  }
 
   // Use `uv run` so it picks up the virtual-env automatically
   const cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
@@ -34,12 +45,23 @@ function startServer() {
   ];
 
   console.log(`[Electron] Starting server: ${cmd} ${args.join(' ')}`);
+  console.log(`[Electron] CWD: ${projectDir}`);
 
   serverProcess = spawn(cmd, args, {
     cwd: projectDir,
+    env: env,
     stdio: ['ignore', 'pipe', 'pipe'],
     // Windows: don't open a console window
     windowsHide: true,
+  });
+
+  serverProcess.on('error', (err) => {
+    console.error(`[Electron] Failed to start server: ${err.message}`);
+    const { dialog } = require('electron');
+    dialog.showErrorBox(
+      'Server Start Failed',
+      `Could not start the Python background server. Make sure Python and "uv" are installed.\n\nError: ${err.message}\nPath checked: ${projectDir}`
+    );
   });
 
   serverProcess.stdout.on('data', d => process.stdout.write(`[server] ${d}`));
@@ -125,6 +147,31 @@ function createWindow() {
   mainWindow.webContents.on('new-window', (event, url) => {
     event.preventDefault();
     shell.openExternal(url);
+  });
+
+  // Add context menu (right-click) for Copy/Paste
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const menu = new Menu();
+
+    // Add dictionary suggestions if misspelled
+    if (params.dictionarySuggestions.length > 0) {
+      params.dictionarySuggestions.forEach(suggestion => {
+        menu.append(new MenuItem({
+          label: suggestion,
+          click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+        }));
+      });
+      menu.append(new MenuItem({ type: 'separator' }));
+    }
+
+    // Standard edit commands
+    menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));
+    menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy }));
+    menu.append(new MenuItem({ label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }));
+    menu.append(new MenuItem({ type: 'separator' }));
+    menu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: params.editFlags.canSelectAll }));
+
+    menu.popup();
   });
 
   mainWindow.on('closed', () => {

@@ -2,14 +2,15 @@
   "name": "cyberarc-outreach",
   "version": "2.0.0",
   "description": "CyberArc MSP — AI-Powered B2B Email Outreach Platform",
+  "homepage": "https://cyberarcmsp.com",
   "main": "electron/main.js",
-  "author": "CyberArc MSP <contact.cyberarcmsp@gmail.com>",
+  "author": "Srinivas Nampalli <srinivasvarma764@gmail.com>",
   "license": "UNLICENSED",
   "private": true,
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder --config",
-    "dist:win": "electron-builder --win",
+    "dist:win": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
     "dist:mac": "electron-builder --mac",
     "dist:linux": "electron-builder --linux"
   },
