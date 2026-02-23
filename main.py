@@ -256,7 +256,7 @@ def stats(session: Session = Depends(db.get_session)):
 class AccountIn(BaseModel):
     email:        str
     app_password: str
-    provider:     str = "outlook"   # "gmail" | "outlook"
+    provider:     str = "outlook"   # "gmail" | "outlook" | "resend"
     display_name: str = ""
 
 
@@ -298,8 +298,9 @@ def test_account(account_id: int, session: Session = Depends(db.get_session)):
     acc = session.get(m.EmailAccount, account_id)
     if not acc:
         raise HTTPException(404, "Account not found")
-    from email_engine import SMTPAccount
-    result = SMTPAccount({
+    from email_engine import SMTPAccount, ResendAccount
+    AccountClass = ResendAccount if acc.provider == "resend" else SMTPAccount
+    result = AccountClass({
         "email": acc.email, "app_password": acc.app_password,
         "provider": acc.provider, "display_name": acc.display_name,
     }).test_connection()
@@ -450,6 +451,7 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(db.get_sessio
 
     existing = {l.email.lower() for l in session.exec(select(m.Lead)).all()}
     added = 0
+    newly_added_leads: list[dict] = []
     for r in results:
         email = r.get("email", "").lower()
         if not email or email in existing:
@@ -460,10 +462,17 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(db.get_sessio
         ]})
         session.add(lead)
         existing.add(email)
+        newly_added_leads.append(r)
         added += 1
 
     session.commit()
-    return {"found": len(results), "added": added}
+    # Always return ALL leads that Apollo found (new + already existing in DB)
+    # so the Results panel always shows exactly what Apollo returned
+    result_emails = {r.get("email", "").lower() for r in results}
+    all_leads = session.exec(select(m.Lead)).all()
+    display_leads = [_lead_to_dict(l) for l in all_leads
+                     if l.email.lower() in result_emails]
+    return {"found": len(results), "added": added, "leads": display_leads}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

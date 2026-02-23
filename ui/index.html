@@ -11,18 +11,18 @@
     rel="stylesheet">
   <style>
     :root {
-      --bg: #080c14;
-      --surface: #0d1420;
-      --surface2: #111927;
-      --border: rgba(255, 255, 255, .07);
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface2: #f1f5f9;
+      --border: rgba(0, 0, 0, .09);
       --accent: #0070f3;
-      --accent2: #00d4ff;
+      --accent2: #0050c8;
       --success: #00c896;
       --warning: #f59e0b;
       --danger: #ef4444;
-      --text: #e8edf5;
-      --muted: #6b7a99;
-      --glow: 0 0 40px rgba(0, 112, 243, .25);
+      --text: #1e293b;
+      --muted: #64748b;
+      --glow: 0 0 20px rgba(0, 112, 243, .15);
     }
 
     * {
@@ -182,7 +182,7 @@
       position: sticky;
       top: 0;
       z-index: 50;
-      background: rgba(8, 12, 20, .8);
+      background: rgba(248, 250, 252, .92);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       padding: 0 32px;
@@ -484,11 +484,11 @@
 
     td {
       padding: 12px 14px;
-      border-bottom: 1px solid rgba(255, 255, 255, .03);
+      border-bottom: 1px solid rgba(0, 0, 0, .05);
     }
 
     tr:hover td {
-      background: rgba(255, 255, 255, .02);
+      background: rgba(0, 0, 0, .025);
     }
 
     .status-badge {
@@ -636,11 +636,11 @@
     }
 
     ::-webkit-scrollbar-track {
-      background: transparent;
+      background: #f1f5f9;
     }
 
     ::-webkit-scrollbar-thumb {
-      background: var(--border);
+      background: #cbd5e1;
       border-radius: 3px;
     }
 
@@ -648,7 +648,7 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, .6);
+      background: rgba(0, 0, 0, .45);
       backdrop-filter: blur(4px);
       z-index: 200;
       display: none;
@@ -957,16 +957,12 @@
                 </div>
               </div>
               <div class="form-group">
-                <label>Company Size</label>
-                <select id="company-size-input" multiple style="height:90px;">
-                  <option value="1,10">1-10 Employees</option>
-                  <option value="11,50">11-50 Employees</option>
-                  <option value="51,200" selected>51-200 Employees</option>
-                  <option value="201,500">201-500 Employees</option>
-                  <option value="501,1000">501-1000 Employees</option>
-                  <option value="1001,5000">1001-5000 Employees</option>
-                  <option value="5001,10000">5001-10000 Employees</option>
-                  <option value="10001">10000+ Employees</option>
+                <label>Seniority</label>
+                <select id="seniority-input" multiple style="height:90px;">
+                  <option value="c_suite" selected>C-Suite (CEO, CTO, CISO)</option>
+                  <option value="vp" selected>VP Level</option>
+                  <option value="director" selected>Director</option>
+                  <option value="manager">Manager</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1009,8 +1005,11 @@
           <div class="panel-header">
             <span class="panel-title">All Leads</span>
             <div style="display:flex;gap:8px;">
-              <button class="btn btn-success btn-sm" onclick="moveAllToOutbox()">Move All to Outbox</button>
+              <label class="btn btn-ghost btn-sm" style="cursor:pointer;">
+                ⬆ CSV <input type="file" accept=".csv" style="display:none" onchange="uploadCSV(this)">
+              </label>
               <button class="btn btn-ghost btn-sm" onclick="loadLeads()">Refresh</button>
+              <button class="btn btn-danger btn-sm" onclick="deleteAllLeads()">Clear All</button>
             </div>
           </div>
           <div class="panel-body" style="padding:0;">
@@ -1057,6 +1056,10 @@
                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
                   </svg>
                   Send Emails
+                </button>
+                <button class="btn btn-danger" style="width:100%;justify-content:center;margin-top:8px;"
+                  onclick="stopCampaign()" id="stop-btn">
+                  ⏹ Stop Campaign
                 </button>
               </div>
             </div>
@@ -1159,23 +1162,34 @@
           </div>
         </div>
         <div class="panel">
-          <div class="panel-header"><span class="panel-title">How to get App Passwords</span></div>
-          <div class="panel-body" style="font-size:13px;line-height:1.8;color:var(--muted);">
-            <ol style="list-style:decimal;padding-left:20px;display:flex;flex-direction:column;gap:8px;">
-              <li>Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank"
-                  style="color:var(--accent2);">mysignins.microsoft.com/security-info</a> for each account</li>
-              <li>Ensure MFA (Microsoft Authenticator) is already enabled</li>
-              <li>Click <strong style="color:var(--text);">"+ Add sign-in method"</strong></li>
-              <li>Select <strong style="color:var(--text);">"App password"</strong></li>
-              <li>Name it <em>SRV Outreach</em> — copy the 16-character password</li>
-              <li>Add it to your <code style="background:var(--surface2);padding:2px 6px;border-radius:4px;">.env</code>
-                file as <code
-                  style="background:var(--surface2);padding:2px 6px;border-radius:4px;">OUTLOOK_PASS_1</code></li>
-            </ol>
+          <div class="panel-header"><span class="panel-title">Provider Setup Guide</span></div>
+          <div class="panel-body"
+            style="font-size:13px;line-height:1.8;color:var(--muted);display:flex;flex-direction:column;gap:14px;">
+            <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📬 Outlook / O365</div>
+              Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank"
+                style="color:var(--accent);">mysignins.microsoft.com</a> → + Add → App password → copy 16-char key.
+              Admin must enable SMTP AUTH + IMAP.
+            </div>
+            <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📧 Gmail</div>
+              Go to <a href="https://myaccount.google.com/apppasswords" target="_blank"
+                style="color:var(--accent);">myaccount.google.com/apppasswords</a> → name it "SRV Outreach" → copy
+              16-char key. Requires 2FA enabled.
+            </div>
             <div
-              style="margin-top:16px;padding:12px;background:rgba(0,200,150,.06);border:1px solid rgba(0,200,150,.15);border-radius:8px;">
-              ✅ Your admin already confirmed: <strong style="color:var(--text)">IMAP Enabled +
-                SmtpClientAuthenticationDisabled = False</strong> — all 5 accounts are ready.
+              style="padding:12px;background:rgba(0,200,150,.06);border-radius:8px;border:1px solid rgba(0,200,150,.2);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">⚡ Resend (Recommended for servers/cloud)
+              </div>
+              Go to <a href="https://resend.com/api-keys" target="_blank"
+                style="color:var(--accent);">resend.com/api-keys</a> → Create API Key → enter it as the "App Password".
+              Key starts with <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">re_</code>.
+              Verify your domain in Resend for best deliverability.
+            </div>
+            <div
+              style="padding:10px 12px;background:rgba(239,68,68,.05);border-radius:8px;border:1px solid rgba(239,68,68,.15);font-size:12px;">
+              ⚠️ <strong>Resend accounts cannot check replies</strong> (send-only API). Use Outlook/Gmail accounts for
+              reply detection.
             </div>
           </div>
         </div>
@@ -1218,13 +1232,35 @@
             </div>
           </div>
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">📬 O365 Account Config</span></div>
+            <div class="panel-header"><span class="panel-title">📬 Add Sender Account</span></div>
             <div class="panel-body">
-              <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Configure up to 5 O365 accounts. Use
-                App Passwords (not login password).</div>
-              <div id="o365-rows"></div>
-              <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:8px;"
-                onclick="saveO365Settings()">Save Inboxes</button>
+              <div class="form-group">
+                <label>Provider</label>
+                <select id="new-acc-provider" onchange="toggleProviderHint(this.value)">
+                  <option value="outlook">📬 Microsoft Outlook / O365 (SMTP)</option>
+                  <option value="gmail">📧 Google Gmail (SMTP)</option>
+                  <option value="resend">⚡ Resend API (Recommended for cloud)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Email Address (From address)</label>
+                <input type="email" id="new-acc-email" placeholder="you@company.com">
+              </div>
+              <div class="form-group">
+                <label id="new-acc-pass-label">App Password (16-char, not your login)</label>
+                <input type="password" id="new-acc-pass" placeholder="xxxx xxxx xxxx xxxx">
+              </div>
+              <div class="form-group">
+                <label>Display Name (optional)</label>
+                <input type="text" id="new-acc-name" placeholder="John Smith">
+              </div>
+              <div id="provider-hint"
+                style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px 10px;border-radius:6px;background:var(--surface2);">
+                💡 Get App Password: <a href="https://mysignins.microsoft.com/security-info" target="_blank"
+                  style="color:var(--accent);">Outlook</a>
+              </div>
+              <button class="btn btn-primary" style="width:100%;justify-content:center;"
+                onclick="addAccountFromSettings()">+ Add Account</button>
             </div>
           </div>
         </div>
@@ -1311,19 +1347,19 @@
     async function refreshStats() {
       try {
         const s = await api('/api/stats');
-        document.getElementById('s-leads').textContent = s.leads;
+        document.getElementById('s-leads').textContent = s.total_leads;
         document.getElementById('s-sent').textContent = s.sent;
         document.getElementById('s-replies').textContent = s.replied;
-        document.getElementById('s-inboxes').textContent = s.inboxes;
-        document.getElementById('leads-count-badge').textContent = s.leads;
+        document.getElementById('s-inboxes').textContent = s.active_accounts;
+        document.getElementById('leads-count-badge').textContent = s.total_leads;
         document.getElementById('replies-badge').textContent = s.replied;
 
-        const rate = s.sent > 0 ? Math.round(s.replied / s.sent * 100) : 0;
+        const rate = s.sent > 0 ? Math.round((s.replied || 0) / s.sent * 100) : 0;
         document.getElementById('s-reply-rate').textContent = rate + '% reply rate';
 
-        const sentPct = s.leads > 0 ? Math.round(s.sent / s.leads * 100) : 0;
-        document.getElementById('h-leads-pct').textContent = s.leads + ' leads';
-        document.getElementById('h-leads-bar').style.width = Math.min(100, s.leads) + '%';
+        const sentPct = s.total_leads > 0 ? Math.round((s.sent || 0) / s.total_leads * 100) : 0;
+        document.getElementById('h-leads-pct').textContent = s.total_leads + ' leads';
+        document.getElementById('h-leads-bar').style.width = Math.min(100, s.total_leads) + '%';
         document.getElementById('h-sent-pct').textContent = sentPct + '%';
         document.getElementById('h-sent-bar').style.width = sentPct + '%';
         document.getElementById('h-reply-pct').textContent = rate + '%';
@@ -1336,9 +1372,9 @@
 
       try {
         const h = await api('/api/health');
-        document.getElementById('status-text').textContent = `${h.inboxes} inbox${h.inboxes !== 1 ? 'es' : ''} · ${h.groq ? 'Groq' : 'OpenRouter'}`;
-        document.getElementById('inbox-badge').textContent = `📬 ×${h.inboxes}`;
-        document.getElementById('model-badge').textContent = h.groq ? '⚡ Groq' : '⚡ OpenRouter';
+        document.getElementById('status-text').textContent = `${h.active_accounts} account${h.active_accounts !== 1 ? 's' : ''} · ${h.groq_key ? 'Groq' : 'OpenRouter'}`;
+        document.getElementById('inbox-badge').textContent = `📬 ×${h.active_accounts}`;
+        document.getElementById('model-badge').textContent = h.groq_key ? '⚡ Groq' : '⚡ OpenRouter';
       } catch (e) {
         document.getElementById('status-text').textContent = 'Server offline';
       }
@@ -1387,8 +1423,8 @@
       const locations = tagData.locations;
       const industry = document.getElementById('industry-input').value.trim();
       const perPage = parseInt(document.getElementById('per-page-input').value) || 25;
-      const companySizeEl = document.getElementById('company-size-input');
-      const companySizes = Array.from(companySizeEl.selectedOptions).map(o => o.value);
+      const seniorityEl = document.getElementById('seniority-input');
+      const seniority = Array.from(seniorityEl.selectedOptions).map(o => o.value);
 
       if (!titles.length) { toast('Add at least one job title', 'error'); return; }
       if (!industry) { toast('Enter an industry', 'error'); return; }
@@ -1399,9 +1435,9 @@
       document.getElementById('search-results').innerHTML = '<div style="text-align:center;color:var(--muted);padding:60px 0;"><div class="spinner" style="width:32px;height:32px;margin:0 auto 12px;border-width:3px;"></div><div>Searching Apollo.io...</div></div>';
 
       try {
-        const res = await api('/api/apollo/search', 'POST', { titles, industry, locations, company_sizes: companySizes, per_page: perPage });
-        renderSearchResults(res.leads);
-        toast(`Found ${res.found} leads (${res.new} new)`, 'success');
+        const res = await api('/api/apollo/search', 'POST', { titles, industry, locations, target_count: perPage });
+        renderSearchResults(res.leads || []);
+        toast(`Found ${res.found} leads (${res.added} new added)`, 'success');
         document.getElementById('search-actions').style.display = 'flex';
       } catch (e) {
         toast('Apollo search failed: ' + e.message, 'error');
@@ -1427,9 +1463,9 @@
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Role</th>
         <th style="text-align:left;padding:8px;color:var(--muted);border-bottom:1px solid var(--border);">Location</th>
       </tr></thead>
-      <tbody>${leads.map(l => `<tr style="border-bottom:1px solid rgba(255,255,255,.03);">
+      <tbody>${leads.map(l => `<tr style="border-bottom:1px solid rgba(0,0,0,.05);">
         <td style="padding:8px;">${l.email}</td>
-        <td style="padding:8px;">${l.first} ${l.last}</td>
+        <td style="padding:8px;">${l.first_name || l.first || ''} ${l.last_name || l.last || ''}</td>
         <td style="padding:8px;">${l.company}</td>
         <td style="padding:8px;color:var(--muted);">${l.role}</td>
         <td style="padding:8px;color:var(--muted);">${l.location}</td>
@@ -1440,16 +1476,16 @@
 
     async function moveToOutbox() {
       try {
-        const r = await api('/api/leads/to-outbox', 'POST');
-        toast(`${r.queued} leads moved to outbox`, 'success');
+        const r = showPage('outbox');  // leads are queued directly via campaign start
+        toast('Switched to Send Emails tab', 'info');
         refreshStats();
       } catch (e) { toast(e.message, 'error'); }
     }
 
     async function moveAllToOutbox() {
       try {
-        const r = await api('/api/leads/to-outbox', 'POST');
-        toast(`${r.queued} leads moved to outbox`, 'success');
+        const r = showPage('outbox');  // leads are queued directly via campaign start
+        toast('Switched to Send Emails tab', 'info');
       } catch (e) { toast(e.message, 'error'); }
     }
 
@@ -1465,7 +1501,7 @@
           ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No leads yet. Search Apollo first.</td></tr>'
           : r.leads.map(l => `<tr>
           <td>${l.email}</td>
-          <td>${l.first || ''} ${l.last || ''}</td>
+          <td>${l.first_name || ''} ${l.last_name || ''}</td>
           <td>${l.company || ''}</td>
           <td style="color:var(--muted)">${l.role || ''}</td>
           <td style="color:var(--muted)">${l.location || ''}</td>
@@ -1481,16 +1517,16 @@
     async function loadOutbox() {
       const tbody = document.getElementById('outbox-tbody');
       try {
-        const r = await api('/api/outbox');
-        tbody.innerHTML = r.outbox.length === 0
+        const r = await api('/api/leads');
+        tbody.innerHTML = r.leads.length === 0
           ? '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--muted);">No emails in outbox yet.</td></tr>'
-          : r.outbox.map(l => `<tr>
+          : r.leads.map(l => `<tr>
           <td>${l.email}</td>
           <td>${l.company || ''}</td>
           <td style="color:var(--muted)">${l.role || ''}</td>
           <td><span class="status-badge ${l.status}">${l.status}</span></td>
           <td style="color:var(--muted);font-size:12px">${l.sent_from || '—'}</td>
-          <td style="color:var(--muted);font-size:12px">${l.sent_at ? new Date(l.sent_at).toLocaleTimeString() : '—'}</td>
+          <td style="color:var(--muted);font-size:12px">${l.created_at ? new Date(l.created_at).toLocaleTimeString() : '—'}</td>
         </tr>`).join('');
       } catch (e) { }
     }
@@ -1502,7 +1538,7 @@
       btn.innerHTML = '<span class="spinner"></span> Sending...';
       btn.disabled = true;
       try {
-        await api('/api/send', 'POST', { daily_limit: limit, delay_seconds: delay });
+        await api('/api/campaign/start', 'POST', { strategy: 'round_robin', daily_limit: limit, delay_seconds: delay });
         toast(`Sending started — up to ${limit} emails`, 'success');
         setTimeout(() => { loadOutbox(); refreshStats(); }, 3000);
       } catch (e) {
@@ -1521,13 +1557,13 @@
       btn.disabled = true;
       try {
         const lead = {
-          first: document.getElementById('prev-first').value || 'John',
+          first_name: document.getElementById('prev-first').value || 'John',
           company: document.getElementById('prev-company').value || 'Acme Corp',
           role: document.getElementById('prev-role').value || 'CTO',
           industry: document.getElementById('prev-industry').value || 'Technology',
           location: document.getElementById('prev-location').value || 'India',
         };
-        const res = await api('/api/generate-preview', 'POST', lead);
+        const res = await api('/api/preview', 'POST', lead);
         document.getElementById('preview-subject').textContent = '📧 ' + res.subject;
         document.getElementById('preview-content').innerHTML = res.bodyHtml;
         document.getElementById('preview-modal').classList.add('open');
@@ -1551,11 +1587,11 @@
         tbody.innerHTML = r.replies.length === 0
           ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No replies yet.</td></tr>'
           : r.replies.map(rep => `<tr>
-          <td>${rep.from}</td>
+          <td>${rep.from_email}</td>
           <td>${rep.subject || ''}</td>
-          <td style="font-size:12px;color:var(--muted)">${rep.inbox || ''}</td>
-          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rep.body || ''}</td>
-          <td style="font-size:12px;color:var(--muted)">${rep.timestamp ? new Date(rep.timestamp).toLocaleString() : ''}</td>
+          <td style="font-size:12px;color:var(--muted)">${rep.inbox_account || ''}</td>
+          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rep.snippet || ''}</td>
+          <td style="font-size:12px;color:var(--muted)">${rep.received_at ? new Date(rep.received_at).toLocaleString() : ''}</td>
         </tr>`).join('');
       } catch (e) { }
     }
@@ -1564,8 +1600,8 @@
       const btn = document.getElementById('check-replies-btn');
       if (btn) { btn.innerHTML = '<span class="spinner"></span> Checking...'; btn.disabled = true; }
       try {
-        const r = await api('/api/check-replies', 'POST');
-        toast(`${r.new_replies} new replies. Auto-replied to ${r.auto_replied}.`, 'success');
+        const r = await api('/api/replies/check', 'POST');
+        toast(`${r.new_replies} new ${r.new_replies === 1 ? 'reply' : 'replies'} found`, r.new_replies > 0 ? 'success' : 'info');
         loadReplies();
         refreshStats();
       } catch (e) {
@@ -1581,45 +1617,62 @@
     async function loadInboxes() {
       const grid = document.getElementById('inbox-grid');
       try {
-        const r = await api('/api/o365/status');
-        if (!r.configured || r.count === 0) {
-          grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No inboxes configured yet. Add them in Settings.</div>';
+        const r = await api('/api/accounts');
+        if (!r.accounts || r.accounts.length === 0) {
+          grid.innerHTML = '<div style="color:var(--muted);font-size:13px;">No accounts yet. Add them in Settings.</div>';
           return;
         }
         grid.innerHTML = r.accounts.map(a => `
-      <div class="inbox-card connected" id="inbox-card-${a.index}">
+      <div class="inbox-card connected" id="inbox-card-${a.id}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
             <div class="inbox-email">${a.email}</div>
-            <div class="inbox-name">${a.name}</div>
+            <div class="inbox-name">${a.display_name || a.email} · ${a.provider}</div>
           </div>
-          <span class="badge green" id="inbox-status-${a.index}">•</span>
+          <span class="badge green" id="inbox-status-${a.id}">Active</span>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="testInbox(${a.index})">Test Connection</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="testAccount(${a.id})">Test</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteAccount(${a.id})">Remove</button>
+        </div>
       </div>`).join('');
       } catch (e) { grid.innerHTML = '<div style="color:var(--danger)">Failed to load inboxes</div>'; }
     }
 
-    async function testInbox(idx) {
-      const badge = document.getElementById('inbox-status-' + idx);
+    async function testAccount(id) {
+      const badge = document.getElementById('inbox-status-' + id);
       badge.textContent = '...';
       try {
-        const r = await api('/api/o365/test/' + idx, 'POST');
+        const r = await api('/api/accounts/' + id + '/test', 'POST');
         badge.textContent = r.ok ? '✓ OK' : '✗ Fail';
         badge.className = 'badge ' + (r.ok ? 'green' : '');
         toast(r.message, r.ok ? 'success' : 'error');
       } catch (e) { toast(e.message, 'error'); }
     }
 
+    async function deleteAccount(id) {
+      if (!confirm('Remove this account?')) return;
+      try {
+        await api('/api/accounts/' + id, 'DELETE');
+        toast('Account removed', 'info');
+        loadInboxes();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
     async function testAllInboxes() {
       try {
-        const r = await api('/api/o365/test-all', 'POST');
-        r.results.forEach((res, i) => {
-          const badge = document.getElementById('inbox-status-' + i);
-          if (badge) { badge.textContent = res.ok ? '✓ OK' : '✗ Fail'; badge.className = 'badge ' + (res.ok ? 'green' : ''); }
-        });
-        const ok = r.results.filter(r => r.ok).length;
-        toast(`${ok}/${r.results.length} inboxes connected`, ok === r.results.length ? 'success' : 'info');
+        const r = await api('/api/accounts');
+        const accounts = r.accounts || [];
+        let ok = 0;
+        for (const a of accounts) {
+          try {
+            const res = await api('/api/accounts/' + a.id + '/test', 'POST');
+            const badge = document.getElementById('inbox-status-' + a.id);
+            if (badge) { badge.textContent = res.ok ? '✓ OK' : '✗ Fail'; badge.className = 'badge ' + (res.ok ? 'green' : ''); }
+            if (res.ok) ok++;
+          } catch (_) { }
+        }
+        toast(`${ok}/${accounts.length} accounts connected`, ok === accounts.length ? 'success' : 'info');
       } catch (e) { toast(e.message, 'error'); }
     }
 
@@ -1627,46 +1680,50 @@
     // SETTINGS
     // ────────────────────────────────
     function initSettings() {
-      const rows = document.getElementById('o365-rows');
-      if (!rows.innerHTML.trim()) {
-        rows.innerHTML = Array.from({ length: 5 }, (_, i) => `
-      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px;">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;font-weight:600;">INBOX ${i + 1}</div>
-        <input type="email" placeholder="email@cyberarcmsp.com" id="o365-email-${i}" style="margin-bottom:6px;">
-        <input type="password" placeholder="App password (16 chars)" id="o365-pass-${i}" style="margin-bottom:6px;">
-        <input type="text" placeholder="Display name" id="o365-name-${i}" style="margin-bottom:6px;">
-        <button class="btn btn-ghost btn-sm" onclick="testO365Row(${i})" style="width:100%;justify-content:center;">Test</button>
-      </div>`).join('');
+      // Settings page is dynamic — showing provider-aware add form
+      toggleProviderHint(document.getElementById('new-acc-provider')?.value || 'outlook');
+    }
+
+    function toggleProviderHint(provider) {
+      const label = document.getElementById('new-acc-pass-label');
+      const hint = document.getElementById('provider-hint');
+      if (!label || !hint) return;
+      if (provider === 'resend') {
+        label.textContent = 'Resend API Key (starts with re_)';
+        document.getElementById('new-acc-pass').placeholder = 're_xxxxxxxxxxxxxxxxxxxx';
+        hint.innerHTML = '⚡ Get your API key at <a href="https://resend.com/api-keys" target="_blank" style="color:var(--accent);">resend.com/api-keys</a>. Verify your sender domain for best deliverability.';
+      } else if (provider === 'gmail') {
+        label.textContent = 'Gmail App Password (16 chars)';
+        document.getElementById('new-acc-pass').placeholder = 'xxxx xxxx xxxx xxxx';
+        hint.innerHTML = '📧 Get App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent);">myaccount.google.com/apppasswords</a>. Requires 2FA.';
+      } else {
+        label.textContent = 'O365 App Password (16 chars)';
+        document.getElementById('new-acc-pass').placeholder = 'xxxx xxxx xxxx xxxx';
+        hint.innerHTML = '📬 Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank" style="color:var(--accent);">mysignins.microsoft.com</a>. Admin must enable SMTP AUTH + IMAP.';
       }
     }
 
-    async function testO365Row(i) {
-      const email = document.getElementById('o365-email-' + i).value;
-      const password = document.getElementById('o365-pass-' + i).value;
-      const name = document.getElementById('o365-name-' + i).value;
-      if (!email || !password) { toast('Enter email and password first', 'error'); return; }
+    async function addAccountFromSettings() {
+      const email = document.getElementById('new-acc-email').value.trim();
+      const password = document.getElementById('new-acc-pass').value.trim();
+      const name = document.getElementById('new-acc-name').value.trim();
+      const provider = document.getElementById('new-acc-provider').value;
+      if (!email || !password) { toast('Email and password/key are required', 'error'); return; }
       try {
-        const r = await api('/api/settings', 'POST', { accounts: [{ email, password, name }] });
-        const t = await api('/api/o365/test/0', 'POST');
-        toast(t.message, t.ok ? 'success' : 'error');
-      } catch (e) { toast(e.message, 'error'); }
-    }
-
-    async function saveO365Settings() {
-      const accounts = [];
-      for (let i = 0; i < 5; i++) {
-        const email = document.getElementById('o365-email-' + i)?.value;
-        const password = document.getElementById('o365-pass-' + i)?.value;
-        const name = document.getElementById('o365-name-' + i)?.value;
-        if (email && password) accounts.push({ email, password, name: name || email.split('@')[0] });
-      }
-      if (!accounts.length) { toast('Add at least one inbox', 'error'); return; }
-      try {
-        const r = await api('/api/settings', 'POST', { accounts });
-        toast(`${r.inboxes} inbox${r.inboxes !== 1 ? 'es' : ''} saved`, 'success');
+        const r = await api('/api/accounts', 'POST', { email, app_password: password, display_name: name, provider });
+        toast(`✓ Account ${email} added (${provider})`, 'success');
+        document.getElementById('new-acc-email').value = '';
+        document.getElementById('new-acc-pass').value = '';
+        document.getElementById('new-acc-name').value = '';
         refreshStats();
+        // If user is on inboxes page, refresh it
+        if (document.getElementById('page-inboxes').classList.contains('active')) loadInboxes();
       } catch (e) { toast(e.message, 'error'); }
     }
+
+    // Keep saveO365Settings as no-op for backwards compat
+    async function saveO365Settings() { await addAccountFromSettings(); }
+    async function testO365Row() { }
 
     async function saveSettings() {
       const body = {};
@@ -1686,6 +1743,38 @@
         await api('/api/settings', 'POST', body);
         toast('Settings saved', 'success');
         refreshStats();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // CSV Upload
+    async function uploadCSV(input) {
+      if (!input.files.length) return;
+      const fd = new FormData();
+      fd.append('file', input.files[0]);
+      try {
+        const r = await fetch('/api/leads/csv', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail);
+        toast(`Imported ${d.added} leads (${d.skipped} skipped)`, 'success');
+        loadLeads(); refreshStats();
+      } catch (e) { toast('CSV upload failed: ' + e.message, 'error'); }
+      input.value = '';
+    }
+
+    async function deleteAllLeads() {
+      if (!confirm('Delete ALL leads? This cannot be undone.')) return;
+      try {
+        const r = await api('/api/leads', 'DELETE');
+        toast(`Deleted ${r.deleted} leads`, 'info');
+        loadLeads(); refreshStats();
+      } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // Stop campaign
+    async function stopCampaign() {
+      try {
+        await api('/api/campaign/stop', 'POST');
+        toast('Campaign stopping…', 'info');
       } catch (e) { toast(e.message, 'error'); }
     }
 

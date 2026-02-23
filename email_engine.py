@@ -1,20 +1,24 @@
 """
-email_engine.py — Multi-account SMTP/IMAP dispatcher for SRV AI Outreach.
+email_engine.py — Multi-provider email dispatcher for SRV AI Outreach.
 
 Three sending strategies:
   • round_robin  — rotate across accounts one email at a time
   • parallel     — send concurrently from all accounts simultaneously
   • batch_count  — send N from Account A, then N from Account B, etc.
 
-Supports Gmail (smtp.gmail.com:587) and Outlook (smtp-mail.outlook.com:587)
-via App Passwords — no OAuth required.
+Supported providers:
+  • outlook  — O365 SMTP (smtp-mail.outlook.com:587) + App Password
+  • gmail    — Gmail SMTP (smtp.gmail.com:587) + App Password
+  • resend   — Resend.com HTTP API (app_password = API key, re_xxxx…)
 """
 import asyncio
 import email as email_lib
 import imaplib
+import json
 import logging
 import re
 import smtplib
+import urllib.request
 from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -32,6 +36,56 @@ def _smtp_host(provider: str) -> str:
 
 def _imap_host(provider: str) -> str:
     return "imap.gmail.com" if provider == "gmail" else "outlook.office365.com"
+
+RESEND_SEND_URL = "https://api.resend.com/emails"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RESEND ACCOUNT (HTTP API — no SMTP)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class ResendAccount:
+    """Sends via Resend.com REST API. app_password field holds the API key."""
+
+    def __init__(self, account: dict):
+        self.email        = account["email"]
+        self.api_key      = account["app_password"]   # re_xxxx…
+        self.provider     = "resend"
+        self.display_name = account.get("display_name", self.email.split("@")[0].title())
+        self.id           = account.get("id")
+
+    def send(self, to: str, subject: str, html: str, plain: str) -> None:
+        """POST to Resend API. Raises on non-2xx."""
+        payload = json.dumps({
+            "from":    f"{self.display_name} <{self.email}>",
+            "to":      [to],
+            "subject": subject,
+            "html":    html,
+            "text":    plain,
+        }).encode()
+        req = urllib.request.Request(
+            RESEND_SEND_URL,
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type":  "application/json",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            if resp.status not in (200, 201):
+                raise RuntimeError(f"Resend API error {resp.status}: {resp.read().decode()[:200]}")
+
+    def test_connection(self) -> dict:
+        """Validate the API key is non-empty (no network call needed — avoids sending a real email)."""
+        if self.api_key and self.api_key.startswith("re_"):
+            return {"ok": True,  "email": self.email, "message": "Resend API key looks valid (re_…) ✓"}
+        return    {"ok": False, "email": self.email, "message": "Resend API key must start with re_"}
+
+    def check_replies(self) -> list[dict]:
+        """Resend is send-only — reply detection not supported via Resend API."""
+        logger.info(f"Resend account {self.email}: IMAP reply check skipped (Resend is send-only).")
+        return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -163,7 +217,8 @@ class EmailEngine:
     """
 
     def __init__(self, accounts: list[dict], strategy: str = "round_robin", batch_size: int = 5):
-        self.accounts   = [SMTPAccount(a) for a in accounts]
+        self.accounts   = [ResendAccount(a) if a.get("provider") == "resend" else SMTPAccount(a)
+                           for a in accounts]
         self.strategy   = strategy
         self.batch_size = batch_size
         self._rr_index  = 0
@@ -297,7 +352,7 @@ class EmailEngine:
     # ── Reply Check ───────────────────────────────────────────────────────────
 
     async def check_all_replies(self) -> list[dict]:
-        """Scan INBOX on all accounts concurrently. Returns deduplicated reply list."""
+        """Scan INBOX on SMTP accounts concurrently (Resend accounts skipped — send-only)."""
         tasks = [asyncio.to_thread(acc.check_replies) for acc in self.accounts]
         nested = await asyncio.gather(*tasks, return_exceptions=True)
         all_replies: list[dict] = []
