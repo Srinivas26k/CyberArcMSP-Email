@@ -1344,33 +1344,39 @@
       <div class="content">
         <div class="panel-grid">
           <div class="panel">
-            <div class="panel-header"><span class="panel-title">🔑 API Keys</span></div>
+            <div class="panel-header"><span class="panel-title">⚙️ API Keys & Branding</span></div>
             <div class="panel-body">
-              <div class="form-group">
+              <div class="form-group"
+                style="margin-bottom: 24px; padding-bottom: 24px; border-bottom: 1px solid var(--border);">
+                <div style="font-weight:600; margin-bottom:12px;">API Keys</div>
                 <label>Groq API Key</label>
                 <input type="password" id="s-groq" placeholder="gsk_...">
-              </div>
-              <div class="form-group">
-                <label>OpenRouter API Key (fallback)</label>
+                <label style="margin-top:12px;">OpenRouter API Key (fallback)</label>
                 <input type="password" id="s-openrouter" placeholder="sk-or-...">
-              </div>
-              <div class="form-group">
-                <label>Apollo.io API Key</label>
+                <label style="margin-top:12px;">Apollo.io API Key</label>
                 <input type="password" id="s-apollo" placeholder="Your Apollo key">
               </div>
               <div class="form-group">
+                <div style="font-weight:600; margin-bottom:12px;">Email Defaults & Branding</div>
                 <label>Calendly URL</label>
-                <input type="text" id="s-calendly" placeholder="https://calendly.com/...">
-              </div>
-              <div class="form-group">
-                <label>Sender Name</label>
-                <input type="text" id="s-sender-name" placeholder="CyberArc MSP">
-              </div>
-              <div class="form-group">
-                <label>Sender Title</label>
+                <input type="text" id="s-calendly" placeholder="https://calendly.com/... (Dynamic Month Appended)">
+                <label style="margin-top:12px;">Default Sender Name</label>
+                <input type="text" id="s-sender-name" placeholder="Leave blank to use Account Name">
+                <label style="margin-top:12px;">Default Sender Title</label>
                 <input type="text" id="s-sender-title" placeholder="Enterprise Solutions Architect">
+                <label style="margin-top:12px;">Company Name</label>
+                <input type="text" id="s-company-name" placeholder="CyberArc MSP">
+                <label style="margin-top:12px;">Tagline</label>
+                <input type="text" id="s-tagline" placeholder="Enterprise-Grade Security...">
+                <label style="margin-top:12px;">Company Logo URL</label>
+                <input type="text" id="s-logo" placeholder="https://...">
+                <label style="margin-top:12px;">Website Domain</label>
+                <input type="text" id="s-website" placeholder="https://cyberarcmsp.com">
+                <label style="margin-top:12px;">Office Locations</label>
+                <input type="text" id="s-offices" placeholder="Global Operations...">
               </div>
-              <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="saveSettings()">Save
+              <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:16px;"
+                onclick="saveSettings()">Save
                 Settings</button>
             </div>
           </div>
@@ -2011,9 +2017,20 @@
     // ────────────────────────────────
     // SETTINGS
     // ────────────────────────────────
-    function initSettings() {
-      // Settings page is dynamic — showing provider-aware add form
+    async function initSettings() {
       toggleProviderHint(document.getElementById('new-acc-provider')?.value || 'outlook');
+      try {
+        const s = await api('/api/settings');
+        // Do not overwrite API key inputs if they are masked
+        if (s.calendly_url) document.getElementById('s-calendly').value = s.calendly_url;
+        if (s.sender_name) document.getElementById('s-sender-name').value = s.sender_name;
+        if (s.sender_title) document.getElementById('s-sender-title').value = s.sender_title;
+        if (s['s-company-name']) document.getElementById('s-company-name').value = s['s-company-name'];
+        if (s['s-tagline']) document.getElementById('s-tagline').value = s['s-tagline'];
+        if (s['s-logo']) document.getElementById('s-logo').value = s['s-logo'];
+        if (s['s-website']) document.getElementById('s-website').value = s['s-website'];
+        if (s['s-offices']) document.getElementById('s-offices').value = s['s-offices'];
+      } catch (e) { console.error('Failed to load settings', e); }
     }
 
     function toggleProviderHint(provider) {
@@ -2048,14 +2065,9 @@
         document.getElementById('new-acc-pass').value = '';
         document.getElementById('new-acc-name').value = '';
         refreshStats();
-        // If user is on inboxes page, refresh it
         if (document.getElementById('page-inboxes').classList.contains('active')) loadInboxes();
       } catch (e) { toast(e.message, 'error'); }
     }
-
-    // Keep saveO365Settings as no-op for backwards compat
-    async function saveO365Settings() { await addAccountFromSettings(); }
-    async function testO365Row() { }
 
     async function saveSettings() {
       const body = {};
@@ -2065,12 +2077,26 @@
       const cal = document.getElementById('s-calendly').value;
       const sn = document.getElementById('s-sender-name').value;
       const st = document.getElementById('s-sender-title').value;
+      const cname = document.getElementById('s-company-name').value;
+      const ctag = document.getElementById('s-tagline').value;
+      const clogo = document.getElementById('s-logo').value;
+      const csite = document.getElementById('s-website').value;
+      const coffs = document.getElementById('s-offices').value;
+
+      // Do not send passwords if they haven't been changed (blank mask)
       if (groq) body.groq_key = groq;
       if (or) body.openrouter_key = or;
       if (ap) body.apollo_key = ap;
-      if (cal) body.calendly_url = cal;
-      if (sn) body.sender_name = sn;
-      if (st) body.sender_title = st;
+
+      body['s-calendly'] = cal;
+      body['s-sender-name'] = sn;
+      body['s-sender-title'] = st;
+      body['s-company-name'] = cname;
+      body['s-tagline'] = ctag;
+      body['s-logo'] = clogo;
+      body['s-website'] = csite;
+      body['s-offices'] = coffs;
+
       try {
         await api('/api/settings', 'POST', body);
         toast('Settings saved', 'success');

@@ -14,7 +14,7 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
-APOLLO_SEARCH_URL  = "https://api.apollo.io/api/v1/mixed_people/api_search"
+APOLLO_SEARCH_URL  = "https://api.apollo.io/api/v1/people/search"
 APOLLO_ENRICH_URL  = "https://api.apollo.io/api/v1/people/bulk_match"
 ENRICH_BATCH_SIZE  = 10   # hard cap to avoid RECORD_LIMIT_EXCEEDED
 

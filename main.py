@@ -20,7 +20,7 @@ from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, Uplo
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 import database as db
@@ -328,7 +328,23 @@ class LeadIn(BaseModel):
 @app.get("/api/leads")
 def get_leads(session: Session = Depends(db.get_session)):
     leads = session.exec(select(m.Lead)).all()
-    return {"leads": [_lead_to_dict(l) for l in leads], "total": len(leads)}
+    # Fetch campaigns and accounts to map sent_from
+    campaigns = session.exec(select(m.Campaign)).all()
+    accounts = {a.id: a.email for a in session.exec(select(m.EmailAccount)).all()}
+    
+    # map lead id to the latest campaign's account email
+    sent_map = {}
+    for c in campaigns:
+        if c.account_id in accounts:
+            sent_map[c.lead_id] = accounts[c.account_id]
+
+    res = []
+    for l in leads:
+        d = _lead_to_dict(l)
+        d["sent_from"] = sent_map.get(l.id, "—")
+        res.append(d)
+
+    return {"leads": res, "total": len(leads)}
 
 
 @app.post("/api/leads", status_code=201)
@@ -601,10 +617,15 @@ async def _run_campaign(lead_ids: list[int], delay: int):
                 )
                 html_body = wrap_email_template(
                     pkg["bodyHtml"],
-                    sender_email=_cfg.get("sender_email", SENDER_DEFAULTS["email"]),
-                    sender_name=_cfg.get("sender_name",  SENDER_DEFAULTS["name"]),
-                    sender_title=_cfg.get("sender_title", SENDER_DEFAULTS["title"]),
-                    calendly_url=_cfg.get("calendly_url", COMPANY_PROFILE["calendly"]),
+                    sender_email="{{SENDER_EMAIL}}",
+                    sender_name="{{SENDER_NAME}}",
+                    sender_title=_cfg.get("s-sender-title", SENDER_DEFAULTS["title"]),
+                    calendly_url=_cfg.get("s-calendly", COMPANY_PROFILE["calendly"]),
+                    company_name=_cfg.get("s-company-name", COMPANY_PROFILE["name"]),
+                    company_tagline=_cfg.get("s-tagline", COMPANY_PROFILE["tagline"]),
+                    company_logo=_cfg.get("s-logo", COMPANY_PROFILE["logo_url"]),
+                    company_website=_cfg.get("s-website", COMPANY_PROFILE["website"]),
+                    offices=_cfg.get("s-offices", COMPANY_PROFILE["offices"]),
                 )
                 plain = _html_to_plain(pkg["bodyHtml"])
 
@@ -759,6 +780,12 @@ class SettingsIn(BaseModel):
     send_strategy:    Optional[str] = None
     batch_size:       Optional[int] = None
     delay_seconds:    Optional[int] = None
+    # Brand Customization
+    s_company_name: Optional[str] = Field(default=None, alias="s-company-name")
+    s_tagline: Optional[str] = Field(default=None, alias="s-tagline")
+    s_logo: Optional[str] = Field(default=None, alias="s-logo")
+    s_website: Optional[str] = Field(default=None, alias="s-website")
+    s_offices: Optional[str] = Field(default=None, alias="s-offices")
 
 
 @app.get("/api/settings")
@@ -770,14 +797,19 @@ def get_settings():
         "groq_key":         mask(_cfg.get("groq_key", "")),
         "openrouter_key":   mask(_cfg.get("openrouter_key", "")),
         "apollo_key":       mask(_cfg.get("apollo_key", "")),
-        "calendly_url":     _cfg.get("calendly_url", ""),
-        "sender_name":      _cfg.get("sender_name", ""),
-        "sender_title":     _cfg.get("sender_title", ""),
+        "calendly_url":     _cfg.get("s-calendly", ""),
+        "sender_name":      _cfg.get("s-sender-name", ""),
+        "sender_title":     _cfg.get("s-sender-title", ""),
         "sender_email":     _cfg.get("sender_email", ""),
         "llm_provider":     _cfg.get("llm_provider", "groq"),
         "openrouter_model": _cfg.get("openrouter_model", ""),
         "send_strategy":    _cfg.get("send_strategy", "round_robin"),
         "batch_size":       _cfg.get("batch_size", 5),
+        "s-company-name":   _cfg.get("s-company-name", ""),
+        "s-tagline":        _cfg.get("s-tagline", ""),
+        "s-logo":           _cfg.get("s-logo", ""),
+        "s-website":        _cfg.get("s-website", ""),
+        "s-offices":        _cfg.get("s-offices", ""),
     }
 
 

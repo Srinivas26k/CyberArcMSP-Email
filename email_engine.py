@@ -325,13 +325,17 @@ class EmailEngine:
     async def _dispatch_one(self, job: dict, account: SMTPAccount) -> dict:
         """Runs the blocking SMTP send in a thread pool."""
         lead_id = job.get("lead_id")
+        # Inject sender details into the pre-generated HTML/plain templates
+        html_final = job["html"].replace("{{SENDER_EMAIL}}", account.email).replace("{{SENDER_NAME}}", account.display_name or "Client Engagement Team")
+        plain_final = job.get("plain", "").replace("{{SENDER_EMAIL}}", account.email).replace("{{SENDER_NAME}}", account.display_name or "Client Engagement Team")
+
         try:
             await asyncio.to_thread(
                 account.send,
                 job["to"],
                 job["subject"],
-                job["html"],
-                job.get("plain", ""),
+                html_final,
+                plain_final,
             )
             logger.info(f"✅ Sent to {job['to']} via {account.email}")
             return {
