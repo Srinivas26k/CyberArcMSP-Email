@@ -1,13 +1,16 @@
 [project]
-name = "v2"
-version = "0.1.0"
-description = "Add your description here"
+name = "srv-ai-outreach"
+version = "2.0.0"
+description = "SRV AI Email Outreach — CyberArc MSP (FastAPI + SQLModel)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.129.2",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "sqlmodel>=0.0.21",
     "httpx>=0.28.1",
     "pydantic>=2.12.5",
     "python-dotenv>=1.2.1",
-    "uvicorn>=0.41.0",
+    "python-multipart>=0.0.9",
+    "aiofiles>=24.1.0",
 ]
