@@ -28,21 +28,35 @@ function startServer() {
     ? path.join(process.resourcesPath, 'app')
     : path.join(__dirname, '..');
 
-  // Ensure 'uv' is accessible even when launched from a GUI shortcut
   const env = Object.assign({}, process.env);
-  if (process.platform !== 'win32') {
-    const home = process.env.HOME || '';
-    env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
-  }
 
-  // Use `uv run` so it picks up the virtual-env automatically
-  const cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
-  const args = [
-    'run', 'uvicorn', 'main:app',
-    '--host', '127.0.0.1',
-    '--port', String(SERVER_PORT),
-    '--log-level', 'warning',
-  ];
+  // When packaged: use the bundled .venv Python directly — uv is not needed on
+  // the end-user machine.  When in dev: fall back to `uv run` as before.
+  let cmd, args;
+  if (isPackaged) {
+    cmd = process.platform === 'win32'
+      ? path.join(projectDir, '.venv', 'Scripts', 'python.exe')
+      : path.join(projectDir, '.venv', 'bin', 'python');
+    args = [
+      '-m', 'uvicorn', 'main:app',
+      '--host', '127.0.0.1',
+      '--port', String(SERVER_PORT),
+      '--log-level', 'warning',
+    ];
+  } else {
+    // Dev mode — uv is expected to be installed
+    if (process.platform !== 'win32') {
+      const home = process.env.HOME || '';
+      env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
+    }
+    cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
+    args = [
+      'run', 'uvicorn', 'main:app',
+      '--host', '127.0.0.1',
+      '--port', String(SERVER_PORT),
+      '--log-level', 'warning',
+    ];
+  }
 
   console.log(`[Electron] Starting server: ${cmd} ${args.join(' ')}`);
   console.log(`[Electron] CWD: ${projectDir}`);
@@ -58,9 +72,12 @@ function startServer() {
   serverProcess.on('error', (err) => {
     console.error(`[Electron] Failed to start server: ${err.message}`);
     const { dialog } = require('electron');
+    const isUvMissing = err.code === 'ENOENT';
     dialog.showErrorBox(
-      'Server Start Failed',
-      `Could not start the Python background server. Make sure Python and "uv" are installed.\n\nError: ${err.message}\nPath checked: ${projectDir}`
+      'CyberArc Outreach — Server Start Failed',
+      isUvMissing
+        ? `The Python runtime could not be found.\n\nTo fix this, open Command Prompt and run:\n\n  1. winget install Python.Python.3.12\n  2. pip install uv\n  3. Restart this app\n\nIf you don't have winget, download Python from: https://python.org/downloads`
+        : `Could not start the background server.\n\nError: ${err.message}\nPython path: ${cmd}\nWorking dir: ${projectDir}`
     );
   });
 
@@ -111,7 +128,7 @@ function createWindow() {
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    title: 'CyberArc MSP — AI Outreach',
+    title: 'CA MSP AI Outreach — CyberArc MSP',
     icon: path.join(__dirname, '..', 'ui', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -128,6 +145,9 @@ function createWindow() {
     mainWindow.show();
     mainWindow.focus();
   });
+
+  // Prevent the HTML <title> from overriding our window titlebar
+  mainWindow.on('page-title-updated', (evt) => evt.preventDefault());
 
   // Open external links in the system browser (window.open AND <a href>)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {

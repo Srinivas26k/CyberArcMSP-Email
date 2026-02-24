@@ -53,7 +53,7 @@ def _load_env_cfg():
         "groq_key":         os.environ.get("GROQ_API_KEY", ""),
         "openrouter_key":   os.environ.get("OPENROUTER_API_KEY", ""),
         "apollo_key":       os.environ.get("APOLLO_API_KEY", ""),
-        "calendly_url":     os.environ.get("CALENDLY_URL", COMPANY_PROFILE["calendly"]),
+        "calendar_url":     os.environ.get("CALENDLY_URL", COMPANY_PROFILE.get("calendly", "")),
         "sender_name":      os.environ.get("SENDER_NAME", SENDER_DEFAULTS["name"]),
         "sender_title":     os.environ.get("SENDER_TITLE", SENDER_DEFAULTS["title"]),
         "llm_provider":     os.environ.get("LLM_PROVIDER", "groq"),
@@ -63,9 +63,20 @@ def _load_env_cfg():
 
 def _load_settings_from_db(session: Session):
     """Override _cfg values from Settings table (user-saved via dashboard)."""
+    # Key migration: old saves used Python attr names (underscores), new saves
+    # use alias names (dashes). Remap old keys transparently.
+    _old_to_new = {
+        "s_company_name": "s-company-name",
+        "s_tagline":      "s-tagline",
+        "s_logo":         "s-logo",
+        "s_website":      "s-website",
+        "s_offices":      "s-offices",
+        "calendly_url":   "calendar_url",
+    }
     rows = session.exec(select(m.Setting)).all()
     for row in rows:
-        _cfg[row.key] = row.value
+        key = _old_to_new.get(row.key, row.key)
+        _cfg[key] = row.value
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -106,7 +117,7 @@ async def lifespan(app: FastAPI):
     _load_env_cfg()
     with Session(db.engine) as session:
         _load_settings_from_db(session)
-    logger.info("✅ SRV AI Outreach started")
+    logger.info("✅ CA MSP AI Outreach started")
     yield
     logger.info("Shutting down…")
 
@@ -115,7 +126,7 @@ async def lifespan(app: FastAPI):
 # FASTAPI APP
 # ─────────────────────────────────────────────────────────────────────────────
 
-app = FastAPI(title="SRV AI Outreach", version="2.0.0", lifespan=lifespan)
+app = FastAPI(title="CA MSP AI Outreach", version="2.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
@@ -256,7 +267,7 @@ def stats(session: Session = Depends(db.get_session)):
 class AccountIn(BaseModel):
     email:        str
     app_password: str
-    provider:     str = "outlook"   # "gmail" | "outlook" | "resend"
+    provider:     str = "outlook"   # "gmail" | "outlook" | "m365" | "resend"
     display_name: str = ""
 
 
@@ -510,7 +521,7 @@ async def preview_email(lead: dict):
         sender_email=_cfg.get("sender_email", SENDER_DEFAULTS["email"]),
         sender_name=_cfg.get("sender_name", SENDER_DEFAULTS["name"]),
         sender_title=_cfg.get("sender_title", SENDER_DEFAULTS["title"]),
-        calendly_url=_cfg.get("calendly_url", COMPANY_PROFILE["calendly"]),
+        calendly_url=_cfg.get("calendar_url", COMPANY_PROFILE.get("calendly", "")),
     )
     return {"subject": pkg["subject"], "bodyHtml": html}
 
@@ -520,11 +531,12 @@ async def preview_email(lead: dict):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class CampaignRequest(BaseModel):
-    strategy:      str = "round_robin"   # round_robin | parallel | batch_count
-    batch_size:    int = 5               # for batch_count
-    daily_limit:   int = 20
-    delay_seconds: int = 65
-    lead_ids:      list[int] = []        # empty = all pending
+    strategy:          str = "round_robin"   # round_robin | parallel | batch_count
+    batch_size:        int = 5               # for batch_count
+    daily_limit:       int = 20
+    delay_seconds:     int = 65
+    lead_ids:          list[int] = []        # empty = all pending
+    active_account_id: Optional[int] = None  # if set, use only this account
 
 
 @app.post("/api/campaign/start")
@@ -551,6 +563,12 @@ async def start_campaign(req: CampaignRequest, background_tasks: BackgroundTasks
     if not accs:
         raise HTTPException(400, "No active email accounts configured.")
 
+    # If a specific account is selected, restrict to that one
+    if req.active_account_id:
+        accs = [a for a in accs if a.id == req.active_account_id]
+        if not accs:
+            raise HTTPException(400, "Selected email account not found or inactive.")
+
     # Save strategy preferences to in-memory config
     _cfg["send_strategy"] = req.strategy
     _cfg["batch_size"]    = req.batch_size
@@ -559,6 +577,7 @@ async def start_campaign(req: CampaignRequest, background_tasks: BackgroundTasks
         _run_campaign,
         [l.id for l in leads],
         req.delay_seconds,
+        [a.id for a in accs],
     )
     return {"status": "started", "lead_count": len(leads), "strategy": req.strategy}
 
@@ -572,14 +591,18 @@ async def stop_campaign():
     return {"status": "stopping"}
 
 
-async def _run_campaign(lead_ids: list[int], delay: int):
+async def _run_campaign(lead_ids: list[int], delay: int, account_ids: list[int] | None = None):
     global _campaign_running
     _campaign_running = True
     await _broadcast("stat", {"message": f"Campaign started for {len(lead_ids)} leads"})
 
     try:
         with Session(db.engine) as session:
-            accs = session.exec(select(m.EmailAccount).where(m.EmailAccount.is_active == True)).all()
+            query = select(m.EmailAccount).where(m.EmailAccount.is_active == True)
+            accs = session.exec(query).all()
+            # Filter to selected account(s) if specified
+            if account_ids:
+                accs = [a for a in accs if a.id in account_ids]
             engine = EmailEngine(
                 [{"id": a.id, "email": a.email, "app_password": a.app_password,
                   "provider": a.provider, "display_name": a.display_name} for a in accs],
@@ -619,8 +642,8 @@ async def _run_campaign(lead_ids: list[int], delay: int):
                     pkg["bodyHtml"],
                     sender_email="{{SENDER_EMAIL}}",
                     sender_name="{{SENDER_NAME}}",
-                    sender_title=_cfg.get("s-sender-title", SENDER_DEFAULTS["title"]),
-                    calendly_url=_cfg.get("s-calendly", COMPANY_PROFILE["calendly"]),
+                    sender_title=_cfg.get("sender_title", SENDER_DEFAULTS["title"]),
+                    calendly_url=_cfg.get("calendar_url", COMPANY_PROFILE.get("calendly", "")),
                     company_name=_cfg.get("s-company-name", COMPANY_PROFILE["name"]),
                     company_tagline=_cfg.get("s-tagline", COMPANY_PROFILE["tagline"]),
                     company_logo=_cfg.get("s-logo", COMPANY_PROFILE["logo_url"]),
@@ -771,7 +794,7 @@ class SettingsIn(BaseModel):
     groq_key:         Optional[str] = None
     openrouter_key:   Optional[str] = None
     apollo_key:       Optional[str] = None
-    calendly_url:     Optional[str] = None
+    calendar_url:     Optional[str] = None   # provider-neutral booking link
     sender_name:      Optional[str] = None
     sender_title:     Optional[str] = None
     sender_email:     Optional[str] = None
@@ -797,9 +820,9 @@ def get_settings():
         "groq_key":         mask(_cfg.get("groq_key", "")),
         "openrouter_key":   mask(_cfg.get("openrouter_key", "")),
         "apollo_key":       mask(_cfg.get("apollo_key", "")),
-        "calendly_url":     _cfg.get("s-calendly", ""),
-        "sender_name":      _cfg.get("s-sender-name", ""),
-        "sender_title":     _cfg.get("s-sender-title", ""),
+        "calendar_url":     _cfg.get("calendar_url", ""),
+        "sender_name":      _cfg.get("sender_name", ""),
+        "sender_title":     _cfg.get("sender_title", ""),
         "sender_email":     _cfg.get("sender_email", ""),
         "llm_provider":     _cfg.get("llm_provider", "groq"),
         "openrouter_model": _cfg.get("openrouter_model", ""),
@@ -815,7 +838,9 @@ def get_settings():
 
 @app.post("/api/settings")
 def save_settings(body: SettingsIn, session: Session = Depends(db.get_session)):
-    updates = body.model_dump(exclude_none=True)
+    # IMPORTANT: must use by_alias=True so keys like 's-company-name' (alias)
+    # are stored instead of 's_company_name' (Python attr name), matching _cfg.get() reads.
+    updates = body.model_dump(by_alias=True, exclude_none=True)
     for key, value in updates.items():
         _cfg[key] = value
         # Persist to DB

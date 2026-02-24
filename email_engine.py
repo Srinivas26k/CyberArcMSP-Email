@@ -7,7 +7,8 @@ Three sending strategies:
   • batch_count  — send N from Account A, then N from Account B, etc.
 
 Supported providers:
-  • outlook  — O365 SMTP (smtp-mail.outlook.com:587) + App Password
+  • outlook  — O365 Personal/Business SMTP (smtp-mail.outlook.com:587) + App Password
+  • m365     — Microsoft 365 Business/Enterprise SMTP (smtp.office365.com:587) + App Password
   • gmail    — Gmail SMTP (smtp.gmail.com:587) + App Password
   • resend   — Resend.com HTTP API (app_password = API key, re_xxxx…)
 """
@@ -32,10 +33,13 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _smtp_host(provider: str) -> str:
-    return "smtp.gmail.com" if provider == "gmail" else "smtp-mail.outlook.com"
+    if provider == "gmail":   return "smtp.gmail.com"
+    if provider == "m365":    return "smtp.office365.com"
+    return "smtp-mail.outlook.com"   # outlook (O365 personal/business)
 
 def _imap_host(provider: str) -> str:
-    return "imap.gmail.com" if provider == "gmail" else "outlook.office365.com"
+    if provider == "gmail":   return "imap.gmail.com"
+    return "outlook.office365.com"   # m365 and outlook share the same IMAP host
 
 RESEND_SEND_URL = "https://api.resend.com/emails"
 
