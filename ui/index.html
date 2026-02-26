@@ -868,6 +868,7 @@
     .hero-title span {
       background: linear-gradient(90deg, #0070f3, #00d4ff);
       -webkit-background-clip: text;
+      background-clip: text; /* Added for compatibility */
       -webkit-text-fill-color: transparent;
     }
   </style>
@@ -936,7 +937,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3" />
           <path
-            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+            d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
         </svg>
         Settings
       </a>
@@ -1178,6 +1179,13 @@
             <div class="panel">
               <div class="panel-header"><span class="panel-title">⚙️ Send Config</span></div>
               <div class="panel-body">
+                <div class="form-group">
+                  <label>Sender Account</label>
+                  <select id="send-account-select" style="width:100%;">
+                    <option value="">🔄 Round-Robin (auto-cycle all verified)</option>
+                  </select>
+                  <div style="font-size:11px;color:var(--muted);margin-top:4px;">Round-Robin rotates automatically across all verified accounts. Or pick one to use it exclusively.</div>
+                </div>
                 <div class="form-group">
                   <label>Daily Email Limit</label>
                   <input type="number" id="daily-limit" value="5" min="1" max="50">
@@ -1436,6 +1444,80 @@
           migration to a new machine. Backups are your safety net.</p>
       </div>
 
+      <!-- Live Database Summary -->
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-header">
+          <span class="panel-title">📊 Current Database Summary</span>
+          <button class="btn btn-ghost btn-sm" onclick="loadRecords()">🔄 Refresh</button>
+        </div>
+        <div class="panel-body">
+          <div id="records-summary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">👥</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-leads">—</div>
+              <div style="font-size:12px;color:var(--muted);">Total Leads</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">⏳</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-pending">—</div>
+              <div style="font-size:12px;color:var(--muted);">Pending</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">📤</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-sent">—</div>
+              <div style="font-size:12px;color:var(--muted);">Emails Sent</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">💬</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-replies">—</div>
+              <div style="font-size:12px;color:var(--muted);">Replies</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">❌</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-failed">—</div>
+              <div style="font-size:12px;color:var(--muted);">Failed</div>
+            </div>
+            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+              <div style="font-size:28px;">📬</div>
+              <div style="font-weight:700;font-size:22px;" id="rec-accounts">—</div>
+              <div style="font-size:12px;color:var(--muted);">Active Inboxes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Previous Sent Data -->
+      <div class="panel" style="margin-bottom:20px;">
+        <div class="panel-header"><span class="panel-title">📂 Import Previous Sent Data (CSV)</span></div>
+        <div class="panel-body">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+            Already sent emails from another tool or a previous campaign? Upload a CSV to import those records so the system knows which leads have already been contacted and won't email them again.
+          </p>
+          <div style="padding:14px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:14px;">
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📋 Required CSV Format</div>
+            <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Your CSV must have a header row with <strong>these exact column names</strong> (order doesn't matter):</p>
+            <table style="font-size:12px;width:100%;border-collapse:collapse;">
+              <thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Column</th><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Required?</th><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Example</th></tr></thead>
+              <tbody>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">email</code></td><td style="padding:6px 8px;color:var(--success);">✅ Yes</td><td style="padding:6px 8px;color:var(--muted);">john@acme.com</td></tr>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">first_name</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">John</td></tr>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">last_name</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">Smith</td></tr>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">company</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">Acme Corp</td></tr>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">role</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">CTO</td></tr>
+                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">status</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);"><code>sent</code> or <code>pending</code></td></tr>
+                <tr><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">industry</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">FinTech</td></tr>
+              </tbody>
+            </table>
+            <p style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Tip: If a <strong>status</strong> column is present and equals <code>sent</code>, those leads will be marked as already sent and skipped in future campaigns. If status is omitted or <code>pending</code>, they'll be queued normally.</p>
+          </div>
+          <label class="btn btn-ghost" style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
+            📂 Upload Previous Sent Data (.csv)
+            <input type="file" accept=".csv" style="display:none;" onchange="uploadCSV(this)">
+          </label>
+          <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">Duplicate emails (already in the database) will be skipped automatically.</div>
+        </div>
+      </div>
+
       <div class="panel-grid">
         <div class="panel">
           <div class="panel-header"><span class="panel-title">📥 Export Records (CSV)</span></div>
@@ -1495,7 +1577,7 @@
               </div>
             </div>
             <div
-              style="padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--muted);">
+              style="padding:12px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.2);font-size:12px;">
               ⚠️ <strong>Tip:</strong> Download a backup before making bulk changes or clearing leads. Store it in
               Google Drive or Dropbox for safekeeping.
             </div>
@@ -1591,10 +1673,11 @@
       });
       document.getElementById('page-title').textContent = pages[name] || name;
       if (name === 'leads') loadLeads();
-      if (name === 'outbox') loadOutbox();
+      if (name === 'outbox') { loadOutbox(); populateSendAccountSelect(); }
       if (name === 'replies') loadReplies();
       if (name === 'inboxes') loadInboxes();
       if (name === 'settings') initSettings();
+      if (name === 'records') loadRecords();
     }
 
     // Warn before accidental refresh/close when a campaign is running
@@ -1915,10 +1998,24 @@
       el.textContent = n > 0 ? `${n} selected` : '0 selected (all pending will send)';
     }
 
+    async function populateSendAccountSelect() {
+      const sel = document.getElementById('send-account-select');
+      if (!sel) return;
+      try {
+        const r = await api('/api/accounts');
+        const accounts = (r.accounts || []);
+        // keep round-robin as default first option
+        sel.innerHTML = '<option value="">🔄 Round-Robin (auto-cycle all verified)</option>' +
+          accounts.map(a => `<option value="${a.id}">${a.display_name || a.email} &lt;${a.email}&gt; · ${a.provider}</option>`).join('');
+      } catch (_) {}
+    }
+
     async function startSending() {
       const btn = document.getElementById('send-btn');
       const limit = parseInt(document.getElementById('daily-limit').value) || 5;
       const delay = parseInt(document.getElementById('email-delay').value) || 65;
+      const accountSel = document.getElementById('send-account-select');
+      const chosenAccountId = accountSel && accountSel.value ? parseInt(accountSel.value) : null;
       btn.innerHTML = '<span class="spinner"></span> Sending...';
       btn.disabled = true;
       // If specific leads are checked, send only those (in dragged order)
@@ -1928,8 +2025,9 @@
         lead_ids = _outboxOrder.filter(id => _selectedLeadIds.has(id));
       }
       try {
-        const body = { strategy: 'round_robin', daily_limit: limit, delay_seconds: delay };
+        const body = { strategy: chosenAccountId ? 'round_robin' : 'round_robin', daily_limit: limit, delay_seconds: delay };
         if (lead_ids.length) body.lead_ids = lead_ids;
+        if (chosenAccountId) body.active_account_id = chosenAccountId;
         await api('/api/campaign/start', 'POST', body);
         toast(`Sending started — ${lead_ids.length ? lead_ids.length + ' selected' : 'all pending'} leads`, 'success');
         setTimeout(() => { loadOutbox(); refreshStats(); }, 3000);
@@ -2279,6 +2377,23 @@
         await api('/api/campaign/stop', 'POST');
         toast('Campaign stopping…', 'info');
       } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ────────────────────────────────
+    // RECORDS PAGE
+    // ────────────────────────────────
+    async function loadRecords() {
+      try {
+        const s = await api('/api/stats');
+        const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+        setEl('rec-leads',    s.total_leads   ?? '—');
+        setEl('rec-pending',  s.pending       ?? '—');
+        setEl('rec-sent',     s.sent          ?? '—');
+        setEl('rec-replies',  s.replied       ?? '—');
+        setEl('rec-failed',   s.failed        ?? '—');
+        setEl('rec-accounts', s.active_accounts ?? '—');
+      } catch (e) { toast('Could not load records summary', 'error'); }
+      loadDbInfo();
     }
 
     // ────────────────────────────────
