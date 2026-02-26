@@ -1,7 +1,7 @@
 name: Build & Release Desktop Apps
 
 # ─── Triggers ────────────────────────────────────────────────────────────────
-# 1. Push a version tag  →  git tag v2.2.0 && git push origin v2.2.0
+# 1. Push a version tag  →  git tag v2.3.0 && git push origin v2.3.0
 # 2. Manual trigger      →  GitHub UI → Actions → "Run workflow"
 on:
   push:
@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       version_tag:
-        description: 'Version tag (e.g. v2.2.0) — used in release name'
+        description: 'Version tag (e.g. v2.3.0) — used in release name'
         required: false
         default: 'dev-build'
 
@@ -35,11 +35,10 @@ jobs:
             artifacts: "dist/*.AppImage\ndist/*.deb"
             label: Linux
 
-          # Uncomment to add macOS builds:
-          # - os: macos-latest
-          #   platform: mac
-          #   artifacts: "dist/*.dmg"
-          #   label: macOS
+          - os: macos-latest
+            platform: mac
+            artifacts: "dist/*.dmg\ndist/*.zip"
+            label: macOS
 
     runs-on: ${{ matrix.os }}
     name: Build — ${{ matrix.label }}
@@ -49,12 +48,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      #── 2. Node.js ──────────────────────────────────────────────────────────
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+      # ── 2. Bun (used locally for node deps — replaces npm) ──────────────────
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: '20'
-          cache: 'npm'
+          bun-version: latest
 
       # ── 3. Python 3.12 ──────────────────────────────────────────────────────
       - name: Set up Python 3.12
@@ -67,25 +65,28 @@ jobs:
         shell: bash
         run: pip install uv
 
-      # ── 5. Create .venv with all Python dependencies ─────────────────────────
-      #       IMPORTANT: This step runs on the TARGET OS runner, so the .venv
-      #       it creates contains NATIVE binaries for that platform:
-      #         Windows runner → .venv/Scripts/python.exe  (PE32 exe)
-      #         Linux runner   → .venv/bin/python           (ELF binary)
-      #       electron-builder then bundles this native .venv into the installer.
+      # ── 5. Create native .venv for this OS ──────────────────────────────────
+      #       Windows runner → .venv/Scripts/python.exe  (PE32 exe)
+      #       Linux runner   → .venv/bin/python           (ELF binary)
+      #       macOS runner   → .venv/bin/python           (Mach-O binary)
       - name: Install Python dependencies
         shell: bash
         run: uv sync --no-dev
 
-      # ── 6. Node dependencies ─────────────────────────────────────────────────
+      # ── 6. Node dependencies via bun ─────────────────────────────────────────
       - name: Install Node dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
-      # ── 7. Build ─────────────────────────────────────────────────────────────
+      # ── 7. macOS: accept Xcode licence (needed by electron-builder) ──────────
+      - name: Accept Xcode licence
+        if: matrix.platform == 'mac'
+        run: sudo xcodebuild -license accept || true
+
+      # ── 8. Build ─────────────────────────────────────────────────────────────
       - name: Build (Windows)
         if: matrix.platform == 'win'
         shell: bash
-        run: npm run dist:win
+        run: bun run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No code-signing cert → skip it. Windows will show a SmartScreen
@@ -94,11 +95,20 @@ jobs:
 
       - name: Build (Linux)
         if: matrix.platform == 'linux'
-        run: npm run dist:linux
+        run: bun run dist:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ── 8. Upload artifact for the Release job ────────────────────────────────
+      - name: Build (macOS)
+        if: matrix.platform == 'mac'
+        run: bun run dist:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Skip code-signing — users will right-click → Open on first run
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          APPLE_API_KEY_ID: ''
+
+      # ── 9. Upload artifact for the Release job ────────────────────────────────
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -137,20 +147,22 @@ jobs:
           body: |
             ## CyberArc MSP AI Outreach — ${{ github.ref_name }}
 
-            ### Download the right file for your system
+            ### ⬇️ Download the right file for your system
 
             | Platform | File | How to install |
             |---|---|---|
-            | 🪟 Windows | `*-Setup.exe` | Run the installer (NSIS). Click "Run anyway" if SmartScreen warns. |
+            | 🪟 Windows | `*-Setup.exe` | Run the installer. Click **"Run anyway"** if SmartScreen warns (no code-signing cert). |
             | 🪟 Windows | `*.zip` | Portable — unzip and run `CyberArc Outreach.exe` without installing. |
+            | 🍎 macOS | `*.dmg` | Open the DMG, drag to Applications. **Right-click → Open** the first time (no Apple notarisation). |
             | 🐧 Linux | `*.AppImage` | `chmod +x *.AppImage && ./CyberArc*.AppImage` |
             | 🐧 Linux | `*.deb` | `sudo dpkg -i *.deb` then find it in your app menu |
 
-            ### Your data is safe across upgrades
+            ### 🔒 Your data is safe across upgrades
             The database lives in your **user-data folder** — not the install directory — so upgrading never loses your leads, accounts, or settings.
-            - Windows: `%APPDATA%\CyberArc Outreach\database.db`
-            - Linux: `~/.config/CyberArc Outreach/database.db`
+            - **Windows:** `%APPDATA%\CyberArc Outreach\database.db`
+            - **macOS:** `~/Library/Application Support/CyberArc Outreach/database.db`
+            - **Linux:** `~/.config/CyberArc Outreach/database.db`
 
-            Before upgrading, go to **Records → Download Full Database Backup** as an extra safety net.
+            > 💡 Before upgrading, go to **Records → Download Full Database Backup** as an extra safety net.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
