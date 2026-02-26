@@ -120,8 +120,7 @@
       "createStartMenuShortcut": true,
       "shortcutName": "CyberArc Outreach",
       "deleteAppDataOnUninstall": false,
-      "runAfterFinish": true,
-      "installerLanguages": ["English"]
+      "runAfterFinish": true
     }
   }
 }
