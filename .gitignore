@@ -12,3 +12,5 @@ wheels/
 .env
 
 node_modules
+database.db
+.env

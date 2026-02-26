@@ -1309,10 +1309,14 @@
           <div class="panel-body"
             style="font-size:13px;line-height:1.8;color:var(--muted);display:flex;flex-direction:column;gap:14px;">
             <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
-              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📬 Outlook / O365</div>
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📬 Outlook / O365 Personal</div>
               Go to <a href="https://mysignins.microsoft.com/security-info" target="_blank"
                 style="color:var(--accent);">mysignins.microsoft.com</a> → + Add → App password → copy 16-char key.
-              Admin must enable SMTP AUTH + IMAP.
+              Use <strong>provider: Outlook</strong>. Admin must enable SMTP AUTH + IMAP.
+            </div>
+            <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🏢 Microsoft 365 Business / Exchange</div>
+              Same App Password process as Outlook but select <strong>provider: Microsoft 365 Business</strong>. Uses <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">smtp.office365.com</code> instead of the consumer server. If unsure, click the <strong>🔍 Detect</strong> button — it will probe both servers automatically.
             </div>
             <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
               <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📧 Gmail</div>
@@ -1331,8 +1335,8 @@
             </div>
             <div
               style="padding:10px 12px;background:rgba(239,68,68,.05);border-radius:8px;border:1px solid rgba(239,68,68,.15);font-size:12px;">
-              ⚠️ <strong>Resend accounts cannot check replies</strong> (send-only API). Use Outlook/Gmail accounts for
-              reply detection.
+              ⚠️ <strong>Resend accounts cannot check replies or save drafts</strong> (send-only API). Use Outlook/Gmail accounts for
+              reply detection and draft saving.
             </div>
           </div>
         </div>
@@ -1386,14 +1390,19 @@
               <div class="form-group">
                 <label>Provider</label>
                 <select id="new-acc-provider" onchange="toggleProviderHint(this.value)">
-                  <option value="outlook">📬 Microsoft Outlook / O365 (SMTP)</option>
-                  <option value="gmail">📧 Google Gmail (SMTP)</option>
-                  <option value="resend">⚡ Resend API (Recommended for cloud)</option>
+                  <option value="outlook">📬 Microsoft Outlook / O365 Personal (smtp-mail.outlook.com)</option>
+                  <option value="m365">🏢 Microsoft 365 Business / Exchange (smtp.office365.com)</option>
+                  <option value="gmail">📧 Google Gmail (smtp.gmail.com)</option>
+                  <option value="resend">⚡ Resend API (Recommended for cloud/servers)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label>Email Address (From address)</label>
-                <input type="email" id="new-acc-email" placeholder="you@company.com">
+                <div style="display:flex;gap:6px;">
+                  <input type="email" id="new-acc-email" placeholder="you@company.com" style="flex:1;" oninput="autoDetectProvider(this.value)">
+                  <button class="btn btn-ghost btn-sm" onclick="detectProvider()" title="Auto-detect provider from email domain" style="white-space:nowrap;">🔍 Detect</button>
+                </div>
+                <div id="detect-result" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
               </div>
               <div class="form-group">
                 <label id="new-acc-pass-label">App Password (16-char, not your login)</label>
@@ -1481,6 +1490,9 @@
                 moment. If you ever reinstall the app, move to a new computer, or the data gets corrupted, you can
                 <strong>restore this file</strong> to pick up exactly where you left off.
               </p>
+              <div id="db-info-bar" style="margin-top:10px;font-size:11px;color:var(--muted);cursor:pointer;" onclick="loadDbInfo()">
+                📂 Click to show database location…
+              </div>
             </div>
             <div
               style="padding:12px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.2);border-radius:8px;margin-bottom:20px;font-size:12px;color:var(--muted);">
@@ -1491,6 +1503,17 @@
               style="width:100%;justify-content:center;font-size:14px;padding:12px;">
               🗄️ Download Full Database Backup
             </a>
+            <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">🔄 Restore from Backup</div>
+              <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+                Upload a previously downloaded <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">.db</code> file to restore all data after upgrading or moving to a new machine. Your current data will be replaced.
+              </p>
+              <label class="btn btn-ghost" style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
+                📂 Upload Backup File (.db)
+                <input type="file" accept=".db" style="display:none;" onchange="restoreBackup(this)">
+              </label>
+              <div id="restore-status" style="font-size:12px;margin-top:8px;"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1511,7 +1534,7 @@
 
   <!-- EMAIL PREVIEW MODAL -->
   <div class="modal-overlay" id="preview-modal">
-    <div class="modal" style="max-width:660px;">
+    <div class="modal" style="max-width:680px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div class="modal-title">Email Preview</div>
         <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕ Close</button>
@@ -1520,7 +1543,22 @@
         style="font-weight:700;font-size:15px;margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;">
       </div>
       <div id="preview-content"
-        style="max-height:500px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);"></div>
+        style="max-height:440px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;"></div>
+      <!-- Draft Actions -->
+      <div style="padding:12px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;">📥 Save to Drafts Folder</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <select id="draft-account-select" style="flex:1;min-width:180px;font-size:12px;padding:7px 10px;">
+            <option value="">Loading accounts…</option>
+          </select>
+          <button class="btn btn-success btn-sm" id="draft-btn" onclick="saveToDraft()" style="white-space:nowrap;">
+            📥 Save to Draft
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">
+          The email will appear in the selected account's <strong>Drafts folder</strong> — open it in Gmail/Outlook to review, edit formatting, and send manually.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1905,6 +1943,8 @@
     // ────────────────────────────────
     // EMAIL PREVIEW
     // ────────────────────────────────
+    let _previewLead = null;  // store last previewed lead for draft
+
     async function previewEmail() {
       const btn = document.getElementById('preview-btn');
       btn.innerHTML = '<span class="spinner"></span> Generating...';
@@ -1917,14 +1957,49 @@
           industry: document.getElementById('prev-industry').value || 'Technology',
           location: document.getElementById('prev-location').value || 'India',
         };
+        _previewLead = lead;
         const res = await api('/api/preview', 'POST', lead);
         document.getElementById('preview-subject').textContent = '📧 ' + res.subject;
         document.getElementById('preview-content').innerHTML = res.bodyHtml;
+
+        // Populate account selector for draft saving
+        try {
+          const accRes = await api('/api/accounts');
+          const sel = document.getElementById('draft-account-select');
+          const smtpAccounts = (accRes.accounts || []).filter(a => a.provider !== 'resend');
+          if (smtpAccounts.length === 0) {
+            sel.innerHTML = '<option value="">No Gmail/Outlook accounts (add one first)</option>';
+          } else {
+            sel.innerHTML = smtpAccounts.map(a =>
+              `<option value="${a.id}">${a.email} (${a.provider})</option>`
+            ).join('');
+          }
+        } catch (_) {}
+
         document.getElementById('preview-modal').classList.add('open');
       } catch (e) {
         toast('Preview failed: ' + e.message, 'error');
       } finally {
         btn.innerHTML = 'Generate Preview';
+        btn.disabled = false;
+      }
+    }
+
+    async function saveToDraft() {
+      if (!_previewLead) { toast('Generate a preview first', 'error'); return; }
+      const btn = document.getElementById('draft-btn');
+      const accountId = document.getElementById('draft-account-select').value;
+      btn.innerHTML = '<span class="spinner"></span> Saving…';
+      btn.disabled = true;
+      try {
+        const body = { lead: _previewLead };
+        if (accountId) body.account_id = parseInt(accountId);
+        const r = await api('/api/preview/draft', 'POST', body);
+        toast(`✓ Draft saved to ${r.saved_to} — open your ${r.provider} Drafts folder to review & send`, 'success');
+      } catch (e) {
+        toast('Draft save failed: ' + e.message, 'error');
+      } finally {
+        btn.innerHTML = '📥 Save to Draft';
         btn.disabled = false;
       }
     }
@@ -2076,10 +2151,49 @@
         label.textContent = 'Gmail App Password (16 chars)';
         document.getElementById('new-acc-pass').placeholder = 'xxxx xxxx xxxx xxxx';
         hint.innerHTML = '📧 Get App Password at <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--accent);">myaccount.google.com/apppasswords</a>. Requires 2FA.';
+      } else if (provider === 'm365') {
+        label.textContent = 'M365 App Password (16 chars)';
+        document.getElementById('new-acc-pass').placeholder = 'xxxx xxxx xxxx xxxx';
+        hint.innerHTML = '🏢 Microsoft 365 Business uses <strong>smtp.office365.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank" style="color:var(--accent);">mysignins.microsoft.com</a>. Admin must enable SMTP AUTH + IMAP for the tenant.';
       } else {
         label.textContent = 'O365 App Password (16 chars)';
         document.getElementById('new-acc-pass').placeholder = 'xxxx xxxx xxxx xxxx';
-        hint.innerHTML = '📬 Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank" style="color:var(--accent);">mysignins.microsoft.com</a>. Admin must enable SMTP AUTH + IMAP.';
+        hint.innerHTML = '📬 Outlook/O365 Personal uses <strong>smtp-mail.outlook.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank" style="color:var(--accent);">mysignins.microsoft.com</a>. Admin must enable SMTP AUTH + IMAP.';
+      }
+    }
+
+    // Auto-detect provider by email domain (client-side heuristic)
+    function autoDetectProvider(email) {
+      const sel = document.getElementById('new-acc-provider');
+      if (!sel || !email.includes('@')) return;
+      const domain = email.split('@')[1]?.toLowerCase() || '';
+      // Clear any previous detect result
+      const resultEl = document.getElementById('detect-result');
+      if (resultEl) resultEl.textContent = '';
+      if (['gmail.com', 'googlemail.com'].includes(domain)) {
+        sel.value = 'gmail'; toggleProviderHint('gmail');
+      } else if (['outlook.com', 'hotmail.com', 'live.com', 'msn.com'].includes(domain)) {
+        sel.value = 'outlook'; toggleProviderHint('outlook');
+      }
+      // For custom domains leave it up to the user or the Detect button
+    }
+
+    // Server-side provider detection (probes SMTP servers)
+    async function detectProvider() {
+      const email = document.getElementById('new-acc-email').value.trim();
+      if (!email || !email.includes('@')) { toast('Enter an email address first', 'error'); return; }
+      const resultEl = document.getElementById('detect-result');
+      resultEl.textContent = '⏳ Detecting…';
+      try {
+        const r = await api('/api/accounts/detect-provider?email=' + encodeURIComponent(email));
+        const sel = document.getElementById('new-acc-provider');
+        sel.value = r.provider;
+        toggleProviderHint(r.provider);
+        resultEl.innerHTML = `✅ Detected: <strong>${r.label}</strong> — ${r.description}`;
+        resultEl.style.color = 'var(--success)';
+      } catch (e) {
+        resultEl.textContent = 'Could not auto-detect: ' + e.message;
+        resultEl.style.color = 'var(--danger)';
       }
     }
 
@@ -2165,6 +2279,44 @@
         await api('/api/campaign/stop', 'POST');
         toast('Campaign stopping…', 'info');
       } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ────────────────────────────────
+    // BACKUP / RESTORE
+    // ────────────────────────────────
+    async function loadDbInfo() {
+      const el = document.getElementById('db-info-bar');
+      if (!el) return;
+      try {
+        const r = await api('/api/db/info');
+        el.innerHTML = `📂 <strong>Database location:</strong> <span style="font-family:monospace;word-break:break-all;">${r.db_path}</span> &nbsp;·&nbsp; ${r.size_mb} MB`;
+        el.style.cursor = 'default';
+        el.onclick = null;
+      } catch (e) { el.textContent = 'Could not load DB info: ' + e.message; }
+    }
+    async function restoreBackup(input) {
+      if (!input.files.length) return;
+      const file = input.files[0];
+      if (!file.name.endsWith('.db')) { toast('Please select a .db backup file', 'error'); return; }
+      if (!confirm(`Restore backup from "${file.name}"?\n\nThis will REPLACE all current data (leads, campaigns, accounts, settings) with the backup. The page will reload after restore.`)) {
+        input.value = ''; return;
+      }
+      const statusEl = document.getElementById('restore-status');
+      if (statusEl) { statusEl.textContent = '⏳ Uploading and restoring…'; statusEl.style.color = 'var(--muted)'; }
+      const fd = new FormData();
+      fd.append('file', file);
+      try {
+        const r = await fetch('/api/db/restore', { method: 'POST', body: fd });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Restore failed');
+        if (statusEl) { statusEl.textContent = '✅ Restored! Reloading…'; statusEl.style.color = 'var(--success)'; }
+        toast('Database restored — reloading in 2 s…', 'success');
+        setTimeout(() => location.reload(), 2000);
+      } catch (e) {
+        if (statusEl) { statusEl.textContent = '❌ ' + e.message; statusEl.style.color = 'var(--danger)'; }
+        toast('Restore failed: ' + e.message, 'error');
+      }
+      input.value = '';
     }
 
     // ────────────────────────────────

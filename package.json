@@ -1,6 +1,6 @@
 {
   "name": "cyberarc-outreach",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "CyberArc MSP — AI-Powered B2B Email Outreach Platform",
   "homepage": "https://cyberarcmsp.com",
   "main": "electron/main.js",
@@ -28,8 +28,11 @@
     },
     "files": [
       "electron/**/*",
-      "ui/**/*",
+      "!ui/**",
       "!node_modules"
+    ],
+    "asarUnpack": [
+      "electron/**/*"
     ],
     "extraResources": [
       {
@@ -40,6 +43,12 @@
           "pyproject.toml",
           "uv.lock",
           ".venv/**",
+          "!.venv/**/__pycache__/**",
+          "!.venv/**/*.pyc",
+          "!.venv/**/*.pyo",
+          "!.venv/**/tests/**",
+          "!.venv/**/test/**",
+          "!.venv/**/*.dist-info/RECORD",
           "company.py",
           "prompt.py",
           "models.py",
@@ -48,7 +57,15 @@
           "llm_client.py",
           "apollo_search.py",
           "server.py",
-          ".env"
+          "!database.db",
+          "!.env"
+        ]
+      },
+      {
+        "from": "ui",
+        "to": "app/ui",
+        "filter": [
+          "**/*"
         ]
       }
     ],
@@ -56,15 +73,11 @@
       "target": [
         {
           "target": "nsis",
-          "arch": [
-            "x64"
-          ]
+          "arch": ["x64"]
         },
         {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
+          "target": "zip",
+          "arch": ["x64"]
         }
       ],
       "icon": "build/icon.ico"
@@ -105,7 +118,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "CyberArc Outreach"
+      "shortcutName": "CyberArc Outreach",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true,
+      "installerLanguages": ["English"]
     }
   }
 }

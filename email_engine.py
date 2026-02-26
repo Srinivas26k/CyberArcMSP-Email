@@ -45,6 +45,38 @@ RESEND_SEND_URL = "https://api.resend.com/emails"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# DRAFT FOLDER DETECTION
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _find_drafts_folder(imap: imaplib.IMAP4_SSL) -> str:
+    """
+    Return the IMAP folder name for Drafts.
+    Tries standard names: [Gmail]/Drafts, Drafts, Draft — first match wins.
+    """
+    candidates = ["[Gmail]/Drafts", "Drafts", "Draft", "INBOX.Drafts", "Drafts/"]
+    try:
+        _, folders = imap.list()
+        folder_names: list[str] = []
+        for item in folders or []:
+            if isinstance(item, bytes):
+                # Item looks like: b'(\\HasNoChildren) "/" "Drafts"'
+                parts = item.decode(errors="replace").split('"')
+                if len(parts) >= 3:
+                    folder_names.append(parts[-2])
+        # Prefer exact matches first
+        for name in candidates:
+            if name in folder_names:
+                return name
+        # Case-insensitive fallback
+        for name in folder_names:
+            if "draft" in name.lower():
+                return name
+    except Exception:
+        pass
+    return "Drafts"   # safe default
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # RESEND ACCOUNT (HTTP API — no SMTP)
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -126,6 +158,33 @@ class SMTPAccount:
             smtp.starttls()
             smtp.login(self.email, self.password)
             smtp.sendmail(self.email, to, msg.as_string())
+
+    # ── Draft (IMAP APPEND) ──────────────────────────────────────────────────
+
+    def save_draft(self, to: str, subject: str, html: str, plain: str) -> None:
+        """
+        Save an email to the provider's Drafts folder via IMAP APPEND.
+        Works for Gmail, Outlook, and M365.
+        """
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = f"{self.display_name} <{self.email}>"
+        msg["To"]      = to
+        msg.attach(MIMEText(plain, "plain"))
+        msg.attach(MIMEText(html,  "html"))
+        raw = msg.as_bytes()
+
+        host = _imap_host(self.provider)
+        with imaplib.IMAP4_SSL(host, 993) as imap:
+            imap.login(self.email, self.password)
+            # Discover the Drafts folder name (varies by provider/locale)
+            drafts_folder = _find_drafts_folder(imap)
+            imap.append(
+                drafts_folder,
+                r"\Draft",
+                imaplib.Time2Internaldate(None),
+                raw,
+            )
 
     # ── Test ─────────────────────────────────────────────────────────────────
 

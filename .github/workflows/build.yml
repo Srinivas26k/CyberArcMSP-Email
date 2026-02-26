@@ -1,77 +1,156 @@
-name: Build Desktop Apps
+name: Build & Release Desktop Apps
 
+# ─── Triggers ────────────────────────────────────────────────────────────────
+# 1. Push a version tag  →  git tag v2.2.0 && git push origin v2.2.0
+# 2. Manual trigger      →  GitHub UI → Actions → "Run workflow"
 on:
   push:
     tags:
-      - 'v*'          # Trigger on tags like v2.0.0, v2.1.0
-  workflow_dispatch:  # Allow manual trigger from GitHub UI
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_tag:
+        description: 'Version tag (e.g. v2.2.0) — used in release name'
+        required: false
+        default: 'dev-build'
 
+# ─── Permissions (needed to create GitHub Releases) ──────────────────────────
+permissions:
+  contents: write
+
+# ─── Jobs ────────────────────────────────────────────────────────────────────
 jobs:
   build:
     strategy:
+      fail-fast: false        # if one OS fails, still finish the others
       matrix:
         include:
           - os: windows-latest
-            name: Windows
-          - os: macos-latest
-            name: macOS
-          - os: ubuntu-latest
-            name: Linux
+            platform: win
+            artifacts: "dist/*.exe\ndist/*.zip"
+            label: Windows
+
+          - os: ubuntu-22.04
+            platform: linux
+            artifacts: "dist/*.AppImage\ndist/*.deb"
+            label: Linux
+
+          # Uncomment to add macOS builds:
+          # - os: macos-latest
+          #   platform: mac
+          #   artifacts: "dist/*.dmg"
+          #   label: macOS
 
     runs-on: ${{ matrix.os }}
-    name: Build ${{ matrix.name }}
+    name: Build — ${{ matrix.label }}
 
     steps:
-      - name: Checkout code
+      # ── 1. Source code ──────────────────────────────────────────────────────
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # ── 2. Node.js ──────────────────────────────────────────────────────────
+      - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
+      # ── 3. Python 3.12 ──────────────────────────────────────────────────────
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
+      # ── 4. Install uv (fast Python package manager) ─────────────────────────
       - name: Install uv
         shell: bash
         run: pip install uv
 
+      # ── 5. Create .venv with all Python dependencies ─────────────────────────
+      #       IMPORTANT: This step runs on the TARGET OS runner, so the .venv
+      #       it creates contains NATIVE binaries for that platform:
+      #         Windows runner → .venv/Scripts/python.exe  (PE32 exe)
+      #         Linux runner   → .venv/bin/python           (ELF binary)
+      #       electron-builder then bundles this native .venv into the installer.
       - name: Install Python dependencies
-        run: uv sync
-        # Creates .venv with all Python deps — bundled via extraResources
+        shell: bash
+        run: uv sync --no-dev
 
+      # ── 6. Node dependencies ─────────────────────────────────────────────────
       - name: Install Node dependencies
         run: npm ci
 
-      - name: Build Electron app (Windows)
-        if: matrix.os == 'windows-latest'
+      # ── 7. Build ─────────────────────────────────────────────────────────────
+      - name: Build (Windows)
+        if: matrix.platform == 'win'
+        shell: bash
         run: npm run dist:win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # No code-signing cert → skip it. Windows will show a SmartScreen
+          # warning on first run; users click "Run anyway".
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
-      - name: Build Electron app (macOS)
-        if: matrix.os == 'macos-latest'
-        run: npm run dist:mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Electron app (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build (Linux)
+        if: matrix.platform == 'linux'
         run: npm run dist:linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      # ── 8. Upload artifact for the Release job ────────────────────────────────
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CyberArc-Outreach-${{ matrix.name }}
+          name: CyberArc-Outreach-${{ matrix.label }}
           path: |
-            dist/*.exe
-            dist/*.dmg
-            dist/*.AppImage
-            dist/*.deb
+            ${{ matrix.artifacts }}
+          if-no-files-found: warn
           retention-days: 30
+
+  # ─── Publish a GitHub Release with download links ────────────────────────
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    # Only create a Release when a real version tag was pushed
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-files
+          merge-multiple: true
+
+      - name: List files
+        run: find release-files -type f | sort
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "CyberArc Outreach ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: release-files/**/*
+          body: |
+            ## CyberArc MSP AI Outreach — ${{ github.ref_name }}
+
+            ### Download the right file for your system
+
+            | Platform | File | How to install |
+            |---|---|---|
+            | 🪟 Windows | `*-Setup.exe` | Run the installer (NSIS). Click "Run anyway" if SmartScreen warns. |
+            | 🪟 Windows | `*.zip` | Portable — unzip and run `CyberArc Outreach.exe` without installing. |
+            | 🐧 Linux | `*.AppImage` | `chmod +x *.AppImage && ./CyberArc*.AppImage` |
+            | 🐧 Linux | `*.deb` | `sudo dpkg -i *.deb` then find it in your app menu |
+
+            ### Your data is safe across upgrades
+            The database lives in your **user-data folder** — not the install directory — so upgrading never loses your leads, accounts, or settings.
+            - Windows: `%APPDATA%\CyberArc Outreach\database.db`
+            - Linux: `~/.config/CyberArc Outreach/database.db`
+
+            Before upgrading, go to **Records → Download Full Database Backup** as an extra safety net.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

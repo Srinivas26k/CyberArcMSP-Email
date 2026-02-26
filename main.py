@@ -304,6 +304,60 @@ def delete_account(account_id: int, session: Session = Depends(db.get_session)):
     return {"status": "deleted"}
 
 
+@app.get("/api/accounts/detect-provider")
+async def detect_provider(email: str):
+    """
+    Detect whether an email account is Gmail, M365 Business, or Outlook personal
+    by probing SMTP connectivity (no credentials needed — just EHLO).
+
+    Returns: { provider, label, description }
+    """
+    if not email or "@" not in email:
+        raise HTTPException(400, "Invalid email address")
+
+    domain = email.split("@")[1].lower()
+
+    # Fast heuristics for known consumer domains
+    GMAIL_DOMAINS = {"gmail.com", "googlemail.com"}
+    OUTLOOK_CONSUMER = {"outlook.com", "hotmail.com", "live.com", "msn.com", "outlook.co.uk"}
+
+    if domain in GMAIL_DOMAINS:
+        return {"provider": "gmail", "label": "Gmail", "description": "Google Gmail SMTP (smtp.gmail.com)"}
+    if domain in OUTLOOK_CONSUMER:
+        return {"provider": "outlook", "label": "Outlook / O365 Personal", "description": "Microsoft consumer SMTP (smtp-mail.outlook.com)"}
+
+    # For custom domains: probe smtp.office365.com first (M365 Business), then smtp-mail.outlook.com
+    async def _probe(host: str, port: int = 587) -> bool:
+        try:
+            import asyncio
+            _, writer = await asyncio.wait_for(
+                asyncio.open_connection(host, port), timeout=5
+            )
+            writer.close()
+            await writer.wait_closed()
+            return True
+        except Exception:
+            return False
+
+    m365_ok = await _probe("smtp.office365.com", 587)
+    if m365_ok:
+        return {
+            "provider": "m365",
+            "label": "Microsoft 365 Business",
+            "description": "M365 Business/Enterprise SMTP (smtp.office365.com). Tenant admin must enable SMTP AUTH.",
+        }
+    outlook_ok = await _probe("smtp-mail.outlook.com", 587)
+    if outlook_ok:
+        return {
+            "provider": "outlook",
+            "label": "Outlook / O365 Personal",
+            "description": "Microsoft consumer/small-business SMTP (smtp-mail.outlook.com).",
+        }
+
+    # Final fallback — can't determine
+    raise HTTPException(422, "Could not detect provider. Choose manually: try M365 Business for company emails.")
+
+
 @app.post("/api/accounts/{account_id}/test")
 def test_account(account_id: int, session: Session = Depends(db.get_session)):
     acc = session.get(m.EmailAccount, account_id)
@@ -524,6 +578,81 @@ async def preview_email(lead: dict):
         calendly_url=_cfg.get("calendar_url", COMPANY_PROFILE.get("calendly", "")),
     )
     return {"subject": pkg["subject"], "bodyHtml": html}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SAVE PREVIEW EMAIL TO DRAFT
+# ─────────────────────────────────────────────────────────────────────────────
+
+class DraftRequest(BaseModel):
+    lead: dict
+    account_id: Optional[int] = None   # None → pick first active account
+
+
+@app.post("/api/preview/draft")
+async def save_to_draft(req: DraftRequest, session: Session = Depends(db.get_session)):
+    """
+    Generate an email for the given lead data and save it to the sender
+    account's Drafts folder via IMAP so the user can review/edit before sending.
+    """
+    # Pick account
+    if req.account_id:
+        acc = session.get(m.EmailAccount, req.account_id)
+        if not acc:
+            raise HTTPException(404, "Account not found")
+    else:
+        acc = session.exec(
+            select(m.EmailAccount).where(m.EmailAccount.is_active == True)
+        ).first()
+        if not acc:
+            raise HTTPException(400, "No active email accounts configured")
+
+    if acc.provider == "resend":
+        raise HTTPException(400, "Resend accounts are send-only and cannot save drafts. Use a Gmail or Outlook account.")
+
+    # Generate the email content
+    sys_p, usr_p = build_email_prompt(req.lead)
+    pkg = await generate_email(
+        sys_p, usr_p,
+        groq_key=_cfg.get("groq_key", ""),
+        openrouter_key=_cfg.get("openrouter_key", ""),
+        preferred_provider=_cfg.get("llm_provider", "groq"),
+        openrouter_model=_cfg.get("openrouter_model") or None,
+    )
+    html = wrap_email_template(
+        pkg["bodyHtml"],
+        sender_email=acc.email,
+        sender_name=acc.display_name or _cfg.get("sender_name", SENDER_DEFAULTS["name"]),
+        sender_title=_cfg.get("sender_title", SENDER_DEFAULTS["title"]),
+        calendly_url=_cfg.get("calendar_url", COMPANY_PROFILE.get("calendly", "")),
+        company_name=_cfg.get("s-company-name", COMPANY_PROFILE["name"]),
+        company_tagline=_cfg.get("s-tagline", COMPANY_PROFILE["tagline"]),
+        company_logo=_cfg.get("s-logo", COMPANY_PROFILE["logo_url"]),
+        company_website=_cfg.get("s-website", COMPANY_PROFILE["website"]),
+        offices=_cfg.get("s-offices", COMPANY_PROFILE["offices"]),
+    )
+    plain = _html_to_plain(pkg["bodyHtml"])
+
+    # Determine the "To" address
+    to_addr = req.lead.get("email", "")
+
+    from email_engine import SMTPAccount
+    smtp_acc = SMTPAccount({
+        "email": acc.email, "app_password": acc.app_password,
+        "provider": acc.provider, "display_name": acc.display_name,
+    })
+
+    try:
+        await asyncio.to_thread(smtp_acc.save_draft, to_addr, pkg["subject"], html, plain)
+    except Exception as exc:
+        raise HTTPException(500, f"Failed to save draft: {exc}")
+
+    return {
+        "status": "saved",
+        "subject": pkg["subject"],
+        "saved_to": acc.email,
+        "provider": acc.provider,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -935,6 +1064,20 @@ def export_replies_csv(session: Session = Depends(db.get_session)):
     )
 
 
+@app.get("/api/db/info")
+def db_info():
+    """Return the database file path and size — useful for support and troubleshooting."""
+    db_path = db._DB_PATH
+    exists  = os.path.exists(db_path)
+    size_mb = round(os.path.getsize(db_path) / 1024 / 1024, 3) if exists else 0
+    return {
+        "db_path":  db_path,
+        "exists":   exists,
+        "size_mb":  size_mb,
+        "data_dir": os.path.dirname(db_path),
+    }
+
+
 @app.get("/api/db/backup")
 def download_database_backup():
     """
@@ -942,7 +1085,7 @@ def download_database_backup():
     This is the complete backup of all leads, campaigns, replies, accounts and settings.
     Useful for migrating to a new machine or restoring data after a reinstall.
     """
-    db_path = os.path.join(os.path.dirname(__file__), "database.db")
+    db_path = db._DB_PATH
     if not os.path.exists(db_path):
         raise HTTPException(404, "Database file not found")
     filename = f"cyberarc_outreach_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
@@ -952,6 +1095,40 @@ def download_database_backup():
         filename=filename,
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@app.post("/api/db/restore")
+async def restore_database_backup(file: UploadFile = File(...)):
+    """
+    Upload a previously downloaded .db backup file to restore all data.
+    The server is restarted automatically after restore via process replacement.
+    """
+    import shutil, tempfile
+    if not file.filename.endswith('.db'):
+        raise HTTPException(400, "File must be a .db SQLite backup")
+    content = await file.read()
+    if len(content) < 100:
+        raise HTTPException(400, "File is too small to be a valid database")
+
+    # Write to a temp file first and validate it's a SQLite db
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    # Quick header check — SQLite files start with "SQLite format 3"
+    if content[:16] != b'SQLite format 3\x00':
+        os.unlink(tmp_path)
+        raise HTTPException(400, "File does not appear to be a valid SQLite database")
+
+    db_path = db._DB_PATH
+    shutil.copy2(tmp_path, db_path)
+    os.unlink(tmp_path)
+
+    return {
+        "status": "restored",
+        "message": "Database restored successfully. Please restart the application to reload all data.",
+        "db_path": db_path,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────

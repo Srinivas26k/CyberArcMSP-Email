@@ -197,7 +197,8 @@ def wrap_email_template(
       <div class="footer-row">
         <div class="footer-left">
           <p style="margin:0 0 4px;font-weight:600;color:#333;">{company_name}</p>
-          <p style="margin:0;font-size:12px;color:#999;">{company_tagline}</p>
+          <p style="margin:0 0 4px;font-size:12px;color:#999;">{company_tagline}</p>
+          {f'<p style="margin:0;font-size:12px;"><a href="{company_website}" class="footer-link" style="color:#0056b3;text-decoration:none;font-weight:500;">{company_website}</a></p>' if company_website else ''}
         </div>
         <div class="footer-right">
           <p>Global Operations<br>{offices}</p>

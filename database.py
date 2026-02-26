@@ -1,11 +1,35 @@
 """
 database.py — SQLite engine, session factory, and DB initialization
+
+The database file is stored in the OS user-data directory so it persists
+across application upgrades:
+  • Windows: %APPDATA%\\CyberArc Outreach\\database.db
+  • macOS:   ~/Library/Application Support/CyberArc Outreach/database.db
+  • Linux:   ~/.local/share/CyberArc Outreach/database.db
+
+The path can be overridden by setting the APP_DATA_DIR environment variable
+(Electron sets this automatically so the Python server knows where to look).
 """
 import os
+import sys
 from sqlmodel import SQLModel, create_engine, Session
 
-# Place database in project root
-_DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
+
+def _resolve_db_path() -> str:
+    """
+    Return the absolute path to database.db, honouring APP_DATA_DIR if set.
+    Falls back gracefully to the project root for dev mode.
+    """
+    app_data_dir = os.environ.get("APP_DATA_DIR", "").strip()
+    if app_data_dir:
+        os.makedirs(app_data_dir, exist_ok=True)
+        return os.path.join(app_data_dir, "database.db")
+
+    # Dev / fallback: place next to this file
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
+
+
+_DB_PATH = _resolve_db_path()
 DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
 engine = create_engine(
