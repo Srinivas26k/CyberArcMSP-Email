@@ -1,10 +1,12 @@
 # Python-generated files
 __pycache__/
 *.py[oc]
-build/
 dist/
 wheels/
 *.egg-info
+
+# Electron build OUTPUT (keep the build/ RESOURCES folder tracked)
+dist/
 
 # Virtual environments
 .venv
