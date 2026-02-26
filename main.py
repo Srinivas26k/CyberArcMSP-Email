@@ -958,9 +958,23 @@ def download_database_backup():
 # SERVE FRONTEND
 # ─────────────────────────────────────────────────────────────────────────────
 
-_UI_DIR = os.path.join(os.path.dirname(__file__), "ui")
+_here = os.path.dirname(os.path.abspath(__file__))
+_UI_DIR = os.path.join(_here, "ui")
+
+# In some packaged layouts the ui folder may be placed differently
+if not os.path.isdir(_UI_DIR):
+    _alt1 = os.path.join(_here, "..", "ui")        # one level up
+    _alt2 = os.path.join(_here, "..", "app", "ui")  # resources/app/ui
+    if os.path.isdir(_alt1):
+        _UI_DIR = os.path.abspath(_alt1)
+    elif os.path.isdir(_alt2):
+        _UI_DIR = os.path.abspath(_alt2)
+
+logger.info(f"UI directory: {_UI_DIR} (exists={os.path.isdir(_UI_DIR)})")
 if os.path.isdir(_UI_DIR):
     app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="ui")
+else:
+    logger.warning("UI directory not found — frontend will not be served. Check packaging.")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
