@@ -55,16 +55,21 @@ jobs:
           bun-version: latest
 
       # ── 3 + 4. uv with its own managed Python 3.12 ──────────────────────────
-      #   astral-sh/setup-uv downloads python-build-standalone, a fully
-      #   self-contained, statically-linked Python that survives relocation.
-      #   This is critical: the .venv Python symlinks would point to the CI
-      #   runner path and break on the user's machine. Using uv's managed
-      #   Python lets us bundle the entire stdlib + binary for Linux/macOS.
       - name: Set up uv + Python 3.12
         uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
           enable-cache: false
+
+      # ── 3b. Python 3.12 via actions/setup-python (Windows bundling only) ─────
+      #         On Windows we use this well-known Python (not uv's shim) to build
+      #         the bundled-python/ directory that ships with the installer.
+      - name: Set up Python 3.12 (Windows bundling)
+        if: runner.os == 'Windows'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        id: sys-python
 
       # ── 5. Create native .venv for this OS ──────────────────────────────────
       #       Windows runner → .venv/Scripts/python.exe  (PE32 exe, not a symlink)
@@ -115,55 +120,39 @@ jobs:
           bundled-python/bin/python3 -c "import uvicorn, fastapi; print('uvicorn', uvicorn.__version__, '| fastapi', fastapi.__version__)"
           echo "Bundle size: $(du -sh bundled-python/ | cut -f1)"
 
-      # ── 5c. Bundle standalone Python runtime (Windows) ──────────────────────
-      #        On Windows, .venv/Scripts/python.exe is a shim that dynamically
-      #        loads python312.dll from the uv cache directory — a path like
-      #        C:\Users\runner\AppData\Roaming\uv\python\cpython-3.12.x\.
-      #        That path does NOT exist on the user's machine, so the shim
-      #        crashes immediately and the server never starts (32s timeout).
-      #        Fix: copy the entire uv-managed Python installation (exe + dll +
-      #        stdlib) into bundled-python/ and merge .venv site-packages in.
+      # ── 5c. Bundle Python runtime (Windows) ─────────────────────────────────
+      #        Use the actions/setup-python Python (real CPython install with
+      #        python.exe + python312.dll in one folder — no shim, no DLL lookup
+      #        path issues). pip-install all project deps then robocopy the whole
+      #        prefix into bundled-python/ for electron-builder to ship.
       - name: Bundle Python runtime (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # uv python find returns the .venv shim on Windows, NOT the real install.
-          # Use "uv python dir" to get the uv-managed Python installations root,
-          # then find the cpython-3.12 folder inside it.
-          $UV_PY_DIR = (uv python dir).Trim()
-          Write-Host "uv Python store: $UV_PY_DIR"
+          # actions/setup-python puts a real Python at a known prefix —
+          # python.exe and python312.dll live in the same directory.
+          $PY_PREFIX = (python -c "import sys; print(sys.prefix)").Trim()
+          Write-Host "Python prefix: $PY_PREFIX"
 
-          $PY_INSTALL = Get-ChildItem "$UV_PY_DIR" -Directory -Filter "cpython-3.12*" |
-            Sort-Object Name -Descending | Select-Object -First 1
+          # pip-install all runtime deps into that Python's site-packages
+          python -m pip install --quiet --no-warn-script-location `
+            "fastapi>=0.115.0" `
+            "uvicorn[standard]>=0.30.0" `
+            "sqlmodel>=0.0.21" `
+            "httpx>=0.28.1" `
+            "pydantic>=2.12.5" `
+            "python-dotenv>=1.2.1" `
+            "python-multipart>=0.0.9" `
+            "aiofiles>=24.1.0"
 
-          if (-not $PY_INSTALL) {
-            Write-Error "Could not find cpython-3.12 in $UV_PY_DIR — aborting"
-            exit 1
-          }
-          $UV_DIR = $PY_INSTALL.FullName
-          Write-Host "Python installation dir: $UV_DIR"
-
-          # robocopy is more reliable than Copy-Item for large recursive copies.
-          # Exit codes 0-7 are success (8+ = errors).
+          # robocopy the entire install (exe + dll + Lib + DLLs + Scripts)
           New-Item -ItemType Directory -Force -Path bundled-python | Out-Null
-          robocopy "$UV_DIR" "bundled-python" /E /NFL /NDL /NJH /NJS
+          robocopy "$PY_PREFIX" "bundled-python" /E /NFL /NDL /NJH /NJS
           if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit $LASTEXITCODE" }
 
-          # Merge .venv site-packages (uvicorn, fastapi, etc.) into bundled Python
-          $SRC = ".venv\Lib\site-packages"
-          $DST = "bundled-python\Lib\site-packages"
-          if (Test-Path $SRC) {
-            Write-Host "Merging site-packages -> $DST"
-            New-Item -ItemType Directory -Force -Path $DST | Out-Null
-            robocopy "$SRC" "$DST" /E /NFL /NDL /NJH /NJS
-            if ($LASTEXITCODE -ge 8) { throw "robocopy site-packages failed with exit $LASTEXITCODE" }
-          } else {
-            Write-Host "WARNING: $SRC not found — deps may be missing"
-          }
-
-          # Smoke-test: verify the bundled exe can import our key packages
+          # Smoke-test: bundled exe must import key packages standalone
           & bundled-python\python.exe -c "import uvicorn, fastapi; print('uvicorn', uvicorn.__version__, '| fastapi OK')"
 
           $SIZE = (Get-ChildItem -Recurse bundled-python | Measure-Object -Property Length -Sum).Sum / 1MB
