@@ -39,7 +39,7 @@ def env(key, default=""):
 GROQ_KEY        = env("GROQ_API_KEY")
 OPENROUTER_KEY  = env("OPENROUTER_API_KEY")
 APOLLO_KEY      = env("APOLLO_API_KEY")
-CALENDLY_URL    = env("CALENDLY_URL", "https://calendly.com/cyberarcmsp/30min")
+CALENDLY_URL    = env("CALENDLY_URL", "https://calendly.com/contact-cyberarcmsp/30min")
 SENDER_NAME     = env("SENDER_NAME", "CyberArc MSP")
 SENDER_TITLE    = env("SENDER_TITLE", "Enterprise Solutions Architect")
 
