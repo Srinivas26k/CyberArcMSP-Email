@@ -115,14 +115,46 @@ jobs:
           bundled-python/bin/python3 -c "import uvicorn, fastapi; print('uvicorn', uvicorn.__version__, '| fastapi', fastapi.__version__)"
           echo "Bundle size: $(du -sh bundled-python/ | cut -f1)"
 
-      # ── 5c. Create empty bundled-python/ stub on Windows ─────────────────────
-      #        Windows .venv/Scripts/python.exe is a real exe (not a symlink) so
-      #        we don't need a standalone bundle there. But extraResources still
-      #        lists bundled-python/ — an empty directory prevents build errors.
-      - name: Create bundled-python stub (Windows only)
+      # ── 5c. Bundle standalone Python runtime (Windows) ──────────────────────
+      #        On Windows, .venv/Scripts/python.exe is a shim that dynamically
+      #        loads python312.dll from the uv cache directory — a path like
+      #        C:\Users\runner\AppData\Roaming\uv\python\cpython-3.12.x\.
+      #        That path does NOT exist on the user's machine, so the shim
+      #        crashes immediately and the server never starts (32s timeout).
+      #        Fix: copy the entire uv-managed Python installation (exe + dll +
+      #        stdlib) into bundled-python/ and merge .venv site-packages in.
+      - name: Bundle Python runtime (Windows)
         if: runner.os == 'Windows'
-        shell: bash
-        run: mkdir -p bundled-python
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          # Locate the uv-managed Python exe and resolve to real path
+          $UV_PY = (uv python find 3.12).Trim()
+          Write-Host "uv Python: $UV_PY"
+          $REAL_PY = (Resolve-Path $UV_PY).Path
+          $UV_DIR  = Split-Path -Parent $REAL_PY
+          Write-Host "Python installation dir: $UV_DIR"
+
+          # Copy entire installation: python.exe + python312.dll + Lib/ + DLLs/
+          New-Item -ItemType Directory -Force -Path bundled-python | Out-Null
+          Copy-Item -Recurse -Force "$UV_DIR\*" bundled-python\
+
+          # Merge .venv site-packages (uvicorn, fastapi, etc.) into bundled Python
+          $SRC = ".venv\Lib\site-packages"
+          $DST = "bundled-python\Lib\site-packages"
+          if (Test-Path $SRC) {
+            Write-Host "Merging site-packages -> $DST"
+            Copy-Item -Recurse -Force "$SRC\*" $DST\
+          } else {
+            Write-Host "WARNING: $SRC not found"
+          }
+
+          # Smoke-test: verify the bundled exe can import our key packages
+          & bundled-python\python.exe -c "import uvicorn, fastapi; print('uvicorn', uvicorn.__version__, '| fastapi OK')"
+
+          $SIZE = (Get-ChildItem -Recurse bundled-python | Measure-Object -Property Length -Sum).Sum / 1MB
+          Write-Host "Bundle size: $([math]::Round($SIZE,1)) MB"
 
       # ── 6. Node dependencies via bun ─────────────────────────────────────────
       - name: Install Node dependencies

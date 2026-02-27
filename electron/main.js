@@ -25,14 +25,16 @@ const path = require('path');
 const http = require('http');
 const fs   = require('fs');
 
-const SERVER_PORT = 8002;
-const SERVER_URL  = `http://localhost:${SERVER_PORT}`;
+let SERVER_PORT = 8002;
+const getServerUrl = () => `http://127.0.0.1:${SERVER_PORT}`;
 
 // User-data directory — survives upgrades on all platforms
 const USER_DATA_DIR = app.getPath('userData');   // e.g. %APPDATA%\CyberArc Outreach
 
 let mainWindow    = null;
 let serverProcess = null;
+let startupLogs   = [];
+let startupExit   = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Resolve Python executable inside the bundled runtime.
@@ -54,10 +56,15 @@ function resolvePythonExe(projectDir) {
   // Candidate paths (in priority order) covering different packaging layouts
   const candidates = isWin
     ? [
+        // ── Preferred: bundled-python/ has python.exe + python312.dll together ──
+        // The .venv/Scripts/python.exe shim requires python312.dll from the uv
+        // cache dir (e.g. %APPDATA%\uv\python\...) which doesn't exist on the
+        // user's machine. bundled-python/ contains the full self-contained build.
+        path.join(projectDir, 'bundled-python', 'python.exe'),
+        // ── Fallback: .venv shim (works only in dev on the dev machine) ──────
         path.join(projectDir, '.venv', 'Scripts', 'python.exe'),
         path.join(projectDir, '.venv', 'Scripts', 'python3.exe'),
-        // electron-builder sometimes extracts under resources/app
-        path.join(process.resourcesPath, '.venv', 'Scripts', 'python.exe'),
+        path.join(process.resourcesPath, 'app', 'bundled-python', 'python.exe'),
       ]
     : [
         // ── Preferred: fully self-contained standalone Python (no symlinks) ──
@@ -74,14 +81,12 @@ function resolvePythonExe(projectDir) {
 
   for (const p of candidates) {
     try {
-      // realpathSync throws for broken symlinks; existsSync returns false
-      const real = fs.realpathSync(p);
-      if (fs.existsSync(real)) {
-        console.log(`[Electron] Found Python at: ${p} → ${real}`);
+      if (fs.existsSync(p)) {
+        console.log(`[Electron] Found Python at: ${p}`);
         return p;
       }
     } catch (_) {
-      // broken symlink or path doesn't exist — try next candidate
+      // path doesn't exist — try next candidate
     }
   }
 
@@ -170,22 +175,29 @@ function startServer() {
     );
   });
 
-  const logLines = [];   // keep last 50 lines for crash dialog
+  startupLogs = [];      // keep last lines during startup
+  startupExit = null;
+  const logLines = [];   // keep last lines for crash dialog
   serverProcess.stdout.on('data', d => {
     const line = `[server] ${d}`;
     process.stdout.write(line);
     logLines.push(line);
+    startupLogs.push(line);
     if (logLines.length > 50) logLines.shift();
+    if (startupLogs.length > 80) startupLogs.shift();
   });
   serverProcess.stderr.on('data', d => {
     const line = `[server-err] ${d}`;
     process.stderr.write(line);
     logLines.push(line);
+    startupLogs.push(line);
     if (logLines.length > 50) logLines.shift();
+    if (startupLogs.length > 80) startupLogs.shift();
   });
 
   serverProcess.on('exit', (code) => {
     console.log(`[Electron] Server exited with code ${code}`);
+    startupExit = { code, logs: startupLogs.slice(-20).join('') };
     if (code !== 0 && code !== null && mainWindow) {
       dialog.showErrorBox(
         'Server Crashed',
@@ -206,7 +218,11 @@ function waitForServer(retries = 40, intervalMs = 800) {
   return new Promise((resolve, reject) => {
     let attempts = 0;
     const check = () => {
-      http.get(`${SERVER_URL}/api/health`, (res) => {
+      if (startupExit && startupExit.code !== 0) {
+        reject(new Error(`Server exited early (code ${startupExit.code})`));
+        return;
+      }
+      http.get(`${getServerUrl()}/api/health`, (res) => {
         if (res.statusCode === 200) {
           resolve();
         } else {
@@ -247,7 +263,7 @@ function createWindow() {
     backgroundColor: '#f8fafc',
   });
 
-  mainWindow.loadURL(SERVER_URL);
+  mainWindow.loadURL(getServerUrl());
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -262,7 +278,7 @@ function createWindow() {
 
   // Intercept normal <a href> link navigations to external URLs
   mainWindow.webContents.on('will-navigate', (event, url) => {
-    if (!url.startsWith(SERVER_URL)) {
+    if (!url.startsWith(getServerUrl())) {
       event.preventDefault();
       shell.openExternal(url);
     }
@@ -307,9 +323,47 @@ function createWindow() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
-  startServer();
+  const preferredPorts = [8002, 8003, 8004];
+  let started = false;
+  let lastErr = null;
+
+  for (const port of preferredPorts) {
+    SERVER_PORT = port;
+    startServer();
+    try {
+      // Give slower Windows machines enough time on first start.
+      await waitForServer(150, 800);   // up to ~120 s
+      started = true;
+      break;
+    } catch (err) {
+      lastErr = err;
+      if (serverProcess) {
+        try { serverProcess.kill(); } catch (_) {}
+      }
+    }
+  }
+
+  if (!started) {
+    const extra = startupExit && startupExit.logs
+      ? `\n\nLast server logs:\n${startupExit.logs}`
+      : '';
+    const errMsg = lastErr ? `\nError: ${lastErr.message}\n` : '\n';
+    dialog.showErrorBox(
+      'Startup Failed',
+      `The Python server could not start.\n${errMsg}` +
+      `Data directory: ${USER_DATA_DIR}\n` +
+      `Ports tried: 8002, 8003, 8004\n\n` +
+      `Possible causes:\n` +
+      `  • Antivirus blocking bundled Python\n` +
+      `  • Incomplete installation (.venv or dependencies missing)\n` +
+      `  • Corporate endpoint protection blocking localhost server\n` +
+      extra
+    );
+    app.quit();
+    return;
+  }
+
   try {
-    await waitForServer(40, 800);   // up to ~32 s
     createWindow();
   } catch (err) {
     console.error('[Electron] Could not connect to server:', err.message);
