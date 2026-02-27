@@ -10,6 +10,8 @@ dist/
 
 # Virtual environments
 .venv
+# Bundled standalone Python runtime (created by CI, never committed)
+bundled-python/
 
 .env
 

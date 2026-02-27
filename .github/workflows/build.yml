@@ -54,24 +54,75 @@ jobs:
         with:
           bun-version: latest
 
-      # ── 3. Python 3.12 ──────────────────────────────────────────────────────
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
+      # ── 3 + 4. uv with its own managed Python 3.12 ──────────────────────────
+      #   astral-sh/setup-uv downloads python-build-standalone, a fully
+      #   self-contained, statically-linked Python that survives relocation.
+      #   This is critical: the .venv Python symlinks would point to the CI
+      #   runner path and break on the user's machine. Using uv's managed
+      #   Python lets us bundle the entire stdlib + binary for Linux/macOS.
+      - name: Set up uv + Python 3.12
+        uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
-
-      # ── 4. Install uv (fast Python package manager) ─────────────────────────
-      - name: Install uv
-        shell: bash
-        run: pip install uv
+          enable-cache: false
 
       # ── 5. Create native .venv for this OS ──────────────────────────────────
-      #       Windows runner → .venv/Scripts/python.exe  (PE32 exe)
-      #       Linux runner   → .venv/bin/python           (ELF binary)
-      #       macOS runner   → .venv/bin/python           (Mach-O binary)
+      #       Windows runner → .venv/Scripts/python.exe  (PE32 exe, not a symlink)
+      #       Linux/macOS   → .venv/bin/python  (symlink → uv managed Python)
       - name: Install Python dependencies
         shell: bash
         run: uv sync --no-dev
+
+      # ── 5b. Bundle standalone Python runtime (Linux / macOS only) ───────────
+      #        The .venv/bin/python symlink points to a CI-runner path that won't
+      #        exist on the user's machine. We resolve the real uv-managed Python
+      #        installation (which is a self-contained, relocatable build from
+      #        python-build-standalone), copy it into bundled-python/, merge
+      #        the .venv site-packages in, and ship that directory via
+      #        extraResources. electron/main.js then prefers bundled-python/
+      #        over .venv on Linux and macOS.
+      - name: Bundle Python runtime (Linux / macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Find the uv-managed Python and resolve any symlinks
+          UV_PY=$(uv python find 3.12)
+          REAL_PY=$(realpath "$UV_PY")
+          UV_DIR=$(dirname "$(dirname "$REAL_PY")")
+          echo "Python installation dir: $UV_DIR"
+
+          # Copy the full self-contained Python (binary + stdlib + headers)
+          mkdir -p bundled-python
+          cp -rL "$UV_DIR/." bundled-python/
+
+          # Determine exact Python version string (e.g. "3.12")
+          PY_VER=$(bundled-python/bin/python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+          echo "Python version: $PY_VER"
+
+          # Merge .venv site-packages (project deps) into the bundled Python
+          SRC=".venv/lib/python${PY_VER}/site-packages"
+          DST="bundled-python/lib/python${PY_VER}/site-packages"
+          if [ -d "$SRC" ]; then
+            echo "Merging site-packages → $DST"
+            cp -r "$SRC/." "$DST/"
+          else
+            echo "WARNING: $SRC not found — deps may be missing"
+          fi
+
+          # Smoke-test: can the bundled Python import our key packages?
+          bundled-python/bin/python3 -c "import uvicorn, fastapi; print('uvicorn', uvicorn.__version__, '| fastapi', fastapi.__version__)"
+          echo "Bundle size: $(du -sh bundled-python/ | cut -f1)"
+
+      # ── 5c. Create empty bundled-python/ stub on Windows ─────────────────────
+      #        Windows .venv/Scripts/python.exe is a real exe (not a symlink) so
+      #        we don't need a standalone bundle there. But extraResources still
+      #        lists bundled-python/ — an empty directory prevents build errors.
+      - name: Create bundled-python stub (Windows only)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: mkdir -p bundled-python
 
       # ── 6. Node dependencies via bun ─────────────────────────────────────────
       - name: Install Node dependencies

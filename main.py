@@ -11,12 +11,15 @@ import json
 import logging
 import os
 import re
+import shutil
+import sqlite3
+import tempfile
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, Depends, FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -105,6 +108,7 @@ async def _broadcast(event_type: str, data: dict):
 
 _campaign_running = False
 _campaign_task: Optional[asyncio.Task] = None
+_campaign_lock = asyncio.Lock()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,6 +117,7 @@ _campaign_task: Optional[asyncio.Task] = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    _migrate_legacy_db_if_needed()
     db.init_db()
     _load_env_cfg()
     with Session(db.engine) as session:
@@ -127,7 +132,12 @@ async def lifespan(app: FastAPI):
 # ─────────────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="CA MSP AI Outreach", version="2.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://127.0.0.1:8002", "http://localhost:8002"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -136,6 +146,40 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 
 def _html_to_plain(html: str) -> str:
     return re.sub(r"<[^>]+>", " ", html).replace("  ", " ").strip()
+
+
+def _migrate_legacy_db_if_needed():
+    """
+    Preserve user data across upgrades by auto-migrating from known legacy DB
+    locations when the current DB file does not yet exist.
+    """
+    target = db._DB_PATH
+    if os.path.exists(target):
+        return
+
+    target_dir = os.path.dirname(target)
+    os.makedirs(target_dir, exist_ok=True)
+
+    here = os.path.dirname(os.path.abspath(__file__))
+    home = os.path.expanduser("~")
+    candidates = [
+        os.path.join(here, "database.db"),
+        os.path.join(home, ".config", "CyberArc Outreach", "database.db"),
+        os.path.join(home, ".local", "share", "CyberArc Outreach", "database.db"),
+        os.path.join(home, ".config", "CA MSP AI Outreach", "database.db"),
+        os.path.join(home, ".local", "share", "CA MSP AI Outreach", "database.db"),
+    ]
+
+    for source in candidates:
+        if source == target:
+            continue
+        try:
+            if os.path.exists(source) and os.path.getsize(source) > 0:
+                shutil.copy2(source, target)
+                logger.warning("Migrated legacy database from %s to %s", source, target)
+                return
+        except Exception as exc:
+            logger.warning("Failed legacy DB migration from %s: %s", source, exc)
 
 
 def _get_engine(session: Session) -> EmailEngine:
@@ -669,60 +713,67 @@ class CampaignRequest(BaseModel):
 
 
 @app.post("/api/campaign/start")
-async def start_campaign(req: CampaignRequest, background_tasks: BackgroundTasks,
-                         session: Session = Depends(db.get_session)):
+async def start_campaign(req: CampaignRequest, session: Session = Depends(db.get_session)):
     global _campaign_running, _campaign_task
 
-    if _campaign_running:
-        raise HTTPException(400, "A campaign is already running. Stop it first.")
+    async with _campaign_lock:
+        if _campaign_running or (_campaign_task and not _campaign_task.done()):
+            raise HTTPException(400, "A campaign is already running. Stop it first.")
 
-    # Gather pending leads
-    if req.lead_ids:
-        leads = [session.get(m.Lead, lid) for lid in req.lead_ids]
-        leads = [l for l in leads if l and l.status == "pending"]
-    else:
-        leads = session.exec(select(m.Lead).where(m.Lead.status == "pending")).all()
+        # Gather pending leads
+        if req.lead_ids:
+            leads = [session.get(m.Lead, lid) for lid in req.lead_ids]
+            leads = [l for l in leads if l and l.status == "pending"]
+        else:
+            leads = session.exec(select(m.Lead).where(m.Lead.status == "pending")).all()
 
-    leads = leads[:req.daily_limit]
+        leads = leads[:req.daily_limit]
 
-    if not leads:
-        raise HTTPException(400, "No pending leads found.")
+        if not leads:
+            raise HTTPException(400, "No pending leads found.")
 
-    accs = session.exec(select(m.EmailAccount).where(m.EmailAccount.is_active == True)).all()
-    if not accs:
-        raise HTTPException(400, "No active email accounts configured.")
-
-    # If a specific account is selected, restrict to that one
-    if req.active_account_id:
-        accs = [a for a in accs if a.id == req.active_account_id]
+        accs = session.exec(select(m.EmailAccount).where(m.EmailAccount.is_active == True)).all()
         if not accs:
-            raise HTTPException(400, "Selected email account not found or inactive.")
+            raise HTTPException(400, "No active email accounts configured.")
 
-    # Save strategy preferences to in-memory config
-    _cfg["send_strategy"] = req.strategy
-    _cfg["batch_size"]    = req.batch_size
+        # If a specific account is selected, restrict to that one
+        if req.active_account_id:
+            accs = [a for a in accs if a.id == req.active_account_id]
+            if not accs:
+                raise HTTPException(400, "Selected email account not found or inactive.")
 
-    background_tasks.add_task(
-        _run_campaign,
-        [l.id for l in leads],
-        req.delay_seconds,
-        [a.id for a in accs],
-    )
+        # Save strategy preferences to in-memory config
+        _cfg["send_strategy"] = req.strategy
+        _cfg["batch_size"] = req.batch_size
+
+        _campaign_running = True
+        _campaign_task = asyncio.create_task(
+            _run_campaign(
+                [l.id for l in leads],
+                req.delay_seconds,
+                [a.id for a in accs],
+            )
+        )
     return {"status": "started", "lead_count": len(leads), "strategy": req.strategy}
 
 
 @app.post("/api/campaign/stop")
 async def stop_campaign():
     global _campaign_running, _campaign_task
+
     _campaign_running = False
-    if _campaign_task and not _campaign_task.done():
-        _campaign_task.cancel()
+    task = _campaign_task
+    if task and not task.done():
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
     return {"status": "stopping"}
 
 
 async def _run_campaign(lead_ids: list[int], delay: int, account_ids: list[int] | None = None):
-    global _campaign_running
-    _campaign_running = True
+    global _campaign_running, _campaign_task
     await _broadcast("stat", {"message": f"Campaign started for {len(lead_ids)} leads"})
 
     try:
@@ -835,6 +886,7 @@ async def _run_campaign(lead_ids: list[int], delay: int, account_ids: list[int] 
 
     finally:
         _campaign_running = False
+        _campaign_task = None
         await _broadcast("campaign_done", {"message": "Campaign finished"})
         await _broadcast("stat", {"refresh": True})
         logger.info("Campaign complete")
@@ -1103,31 +1155,69 @@ async def restore_database_backup(file: UploadFile = File(...)):
     Upload a previously downloaded .db backup file to restore all data.
     The server is restarted automatically after restore via process replacement.
     """
-    import shutil, tempfile
+    if _campaign_running:
+        raise HTTPException(409, "Stop the running campaign before restoring a backup.")
+
     if not file.filename.endswith('.db'):
         raise HTTPException(400, "File must be a .db SQLite backup")
-    content = await file.read()
-    if len(content) < 100:
+    max_size_bytes = 512 * 1024 * 1024
+    total_bytes = 0
+    db_path = db._DB_PATH
+    db_dir = os.path.dirname(db_path)
+    os.makedirs(db_dir, exist_ok=True)
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".restore.db", dir=db_dir) as tmp:
+        tmp_path = tmp.name
+        while True:
+            chunk = await file.read(1024 * 1024)
+            if not chunk:
+                break
+            total_bytes += len(chunk)
+            if total_bytes > max_size_bytes:
+                os.unlink(tmp_path)
+                raise HTTPException(400, "Backup file is too large.")
+            tmp.write(chunk)
+
+    if total_bytes < 100:
+        os.unlink(tmp_path)
         raise HTTPException(400, "File is too small to be a valid database")
 
-    # Write to a temp file first and validate it's a SQLite db
-    with tempfile.NamedTemporaryFile(delete=False, suffix='.db') as tmp:
-        tmp.write(content)
-        tmp_path = tmp.name
-
-    # Quick header check — SQLite files start with "SQLite format 3"
-    if content[:16] != b'SQLite format 3\x00':
+    with open(tmp_path, "rb") as f:
+        header = f.read(16)
+    if header != b"SQLite format 3\x00":
         os.unlink(tmp_path)
         raise HTTPException(400, "File does not appear to be a valid SQLite database")
 
-    db_path = db._DB_PATH
-    shutil.copy2(tmp_path, db_path)
-    os.unlink(tmp_path)
+    try:
+        conn = sqlite3.connect(f"file:{tmp_path}?mode=ro", uri=True)
+        try:
+            check = conn.execute("PRAGMA integrity_check;").fetchone()
+        finally:
+            conn.close()
+        if not check or check[0] != "ok":
+            os.unlink(tmp_path)
+            raise HTTPException(400, "Backup integrity check failed.")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        os.unlink(tmp_path)
+        raise HTTPException(400, f"Could not validate backup: {exc}")
+
+    backup_path = f"{db_path}.pre_restore_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    try:
+        db.engine.dispose()
+        if os.path.exists(db_path):
+            shutil.copy2(db_path, backup_path)
+        os.replace(tmp_path, db_path)
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
     return {
         "status": "restored",
         "message": "Database restored successfully. Please restart the application to reload all data.",
         "db_path": db_path,
+        "previous_backup_path": backup_path if os.path.exists(backup_path) else None,
     }
 
 

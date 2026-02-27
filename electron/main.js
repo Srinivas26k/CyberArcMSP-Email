@@ -35,11 +35,22 @@ let mainWindow    = null;
 let serverProcess = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Resolve Python executable inside the bundled .venv
+// Resolve Python executable inside the bundled runtime.
+//
+// On Windows the .venv/Scripts/python.exe produced by uv is a real PE32
+// binary, so we check it directly.
+//
+// On Linux/macOS the .venv/bin/python entries are symlinks that point to the
+// CI-runner's uv-managed Python path — a path that does NOT exist on the
+// user's machine.  The build step therefore copies the entire python-build-
+// standalone installation into bundled-python/ and merges .venv site-packages
+// into it.  We prefer bundled-python/ first, and fall back to .venv for
+// dev-mode or legacy builds.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function resolvePythonExe(projectDir) {
   const isWin = process.platform === 'win32';
+
   // Candidate paths (in priority order) covering different packaging layouts
   const candidates = isWin
     ? [
@@ -49,16 +60,28 @@ function resolvePythonExe(projectDir) {
         path.join(process.resourcesPath, '.venv', 'Scripts', 'python.exe'),
       ]
     : [
-        path.join(projectDir, '.venv', 'bin', 'python'),
+        // ── Preferred: fully self-contained standalone Python (no symlinks) ──
+        path.join(projectDir, 'bundled-python', 'bin', 'python3.12'),
+        path.join(projectDir, 'bundled-python', 'bin', 'python3'),
+        path.join(projectDir, 'bundled-python', 'bin', 'python'),
+        // ── Fallback: .venv (works in dev-mode; may be a broken symlink when
+        //    packaged — kept here so legacy AppImages still attempt it) ────────
         path.join(projectDir, '.venv', 'bin', 'python3'),
-        path.join(process.resourcesPath, '.venv', 'bin', 'python'),
+        path.join(projectDir, '.venv', 'bin', 'python'),
         path.join(process.resourcesPath, '.venv', 'bin', 'python3'),
+        path.join(process.resourcesPath, '.venv', 'bin', 'python'),
       ];
 
   for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      console.log(`[Electron] Found Python at: ${p}`);
-      return p;
+    try {
+      // realpathSync throws for broken symlinks; existsSync returns false
+      const real = fs.realpathSync(p);
+      if (fs.existsSync(real)) {
+        console.log(`[Electron] Found Python at: ${p} → ${real}`);
+        return p;
+      }
+    } catch (_) {
+      // broken symlink or path doesn't exist — try next candidate
     }
   }
 
@@ -94,7 +117,8 @@ function startServer() {
       dialog.showErrorBox(
         'Python Not Found',
         `The bundled Python interpreter could not be located.\n\n` +
-        `Expected inside: ${projectDir}\\.venv\\\n\n` +
+        `Looked inside: ${path.join(projectDir, 'bundled-python')} (preferred)\n` +
+        `         and: ${path.join(projectDir, '.venv')}\n\n` +
         `Please re-download the latest installer. If the problem persists contact support.`
       );
       app.quit();

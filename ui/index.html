@@ -868,7 +868,8 @@
     .hero-title span {
       background: linear-gradient(90deg, #0070f3, #00d4ff);
       -webkit-background-clip: text;
-      background-clip: text; /* Added for compatibility */
+      background-clip: text;
+      /* Added for compatibility */
       -webkit-text-fill-color: transparent;
     }
   </style>
@@ -1184,7 +1185,8 @@
                   <select id="send-account-select" style="width:100%;">
                     <option value="">🔄 Round-Robin (auto-cycle all verified)</option>
                   </select>
-                  <div style="font-size:11px;color:var(--muted);margin-top:4px;">Round-Robin rotates automatically across all verified accounts. Or pick one to use it exclusively.</div>
+                  <div style="font-size:11px;color:var(--muted);margin-top:4px;">Round-Robin rotates automatically
+                    across all verified accounts. Or pick one to use it exclusively.</div>
                 </div>
                 <div class="form-group">
                   <label>Daily Email Limit</label>
@@ -1323,8 +1325,12 @@
               Use <strong>provider: Outlook</strong>. Admin must enable SMTP AUTH + IMAP.
             </div>
             <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
-              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🏢 Microsoft 365 Business / Exchange</div>
-              Same App Password process as Outlook but select <strong>provider: Microsoft 365 Business</strong>. Uses <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">smtp.office365.com</code> instead of the consumer server. If unsure, click the <strong>🔍 Detect</strong> button — it will probe both servers automatically.
+              <div style="font-weight:600;color:var(--text);margin-bottom:4px;">🏢 Microsoft 365 Business / Exchange
+              </div>
+              Same App Password process as Outlook but select <strong>provider: Microsoft 365 Business</strong>. Uses
+              <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">smtp.office365.com</code>
+              instead of the consumer server. If unsure, click the <strong>🔍 Detect</strong> button — it will probe
+              both servers automatically.
             </div>
             <div style="padding:12px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
               <div style="font-weight:600;color:var(--text);margin-bottom:4px;">📧 Gmail</div>
@@ -1343,7 +1349,8 @@
             </div>
             <div
               style="padding:10px 12px;background:rgba(239,68,68,.05);border-radius:8px;border:1px solid rgba(239,68,68,.15);font-size:12px;">
-              ⚠️ <strong>Resend accounts cannot check replies or save drafts</strong> (send-only API). Use Outlook/Gmail accounts for
+              ⚠️ <strong>Resend accounts cannot check replies or save drafts</strong> (send-only API). Use Outlook/Gmail
+              accounts for
               reply detection and draft saving.
             </div>
           </div>
@@ -1407,8 +1414,10 @@
               <div class="form-group">
                 <label>Email Address (From address)</label>
                 <div style="display:flex;gap:6px;">
-                  <input type="email" id="new-acc-email" placeholder="you@company.com" style="flex:1;" oninput="autoDetectProvider(this.value)">
-                  <button class="btn btn-ghost btn-sm" onclick="detectProvider()" title="Auto-detect provider from email domain" style="white-space:nowrap;">🔍 Detect</button>
+                  <input type="email" id="new-acc-email" placeholder="you@company.com" style="flex:1;"
+                    oninput="autoDetectProvider(this.value)">
+                  <button class="btn btn-ghost btn-sm" onclick="detectProvider()"
+                    title="Auto-detect provider from email domain" style="white-space:nowrap;">🔍 Detect</button>
                 </div>
                 <div id="detect-result" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
               </div>
@@ -1432,175 +1441,237 @@
         </div>
       </div>
     </div>
-  </main>
 
-  <!-- ═══════════════ RECORDS & BACKUP ═══════════════ -->
-  <div id="page-records" class="page" style="margin-left:220px;">
-    <div class="content">
-      <div style="margin-bottom:24px;">
-        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:6px;">Records &amp;
-          Backup</div>
-        <p style="font-size:13px;color:var(--muted);">Download your data at any time for record-keeping, compliance, or
-          migration to a new machine. Backups are your safety net.</p>
-      </div>
-
-      <!-- Live Database Summary -->
-      <div class="panel" style="margin-bottom:20px;">
-        <div class="panel-header">
-          <span class="panel-title">📊 Current Database Summary</span>
-          <button class="btn btn-ghost btn-sm" onclick="loadRecords()">🔄 Refresh</button>
+    <!-- ═══════════════ RECORDS & BACKUP ═══════════════ -->
+    <div id="page-records" class="page">
+      <div class="content">
+        <div style="margin-bottom:24px;">
+          <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:6px;">Records &amp;
+            Backup</div>
+          <p style="font-size:13px;color:var(--muted);">Download your data at any time for record-keeping, compliance,
+            or
+            migration to a new machine. Backups are your safety net.</p>
         </div>
-        <div class="panel-body">
-          <div id="records-summary" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">👥</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-leads">—</div>
-              <div style="font-size:12px;color:var(--muted);">Total Leads</div>
-            </div>
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">⏳</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-pending">—</div>
-              <div style="font-size:12px;color:var(--muted);">Pending</div>
-            </div>
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">📤</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-sent">—</div>
-              <div style="font-size:12px;color:var(--muted);">Emails Sent</div>
-            </div>
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">💬</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-replies">—</div>
-              <div style="font-size:12px;color:var(--muted);">Replies</div>
-            </div>
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">❌</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-failed">—</div>
-              <div style="font-size:12px;color:var(--muted);">Failed</div>
-            </div>
-            <div style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-              <div style="font-size:28px;">📬</div>
-              <div style="font-weight:700;font-size:22px;" id="rec-accounts">—</div>
-              <div style="font-size:12px;color:var(--muted);">Active Inboxes</div>
-            </div>
+
+        <!-- Live Database Summary -->
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header">
+            <span class="panel-title">📊 Current Database Summary</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadRecords()">🔄 Refresh</button>
           </div>
-        </div>
-      </div>
-
-      <!-- Upload Previous Sent Data -->
-      <div class="panel" style="margin-bottom:20px;">
-        <div class="panel-header"><span class="panel-title">📂 Import Previous Sent Data (CSV)</span></div>
-        <div class="panel-body">
-          <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
-            Already sent emails from another tool or a previous campaign? Upload a CSV to import those records so the system knows which leads have already been contacted and won't email them again.
-          </p>
-          <div style="padding:14px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:14px;">
-            <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📋 Required CSV Format</div>
-            <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Your CSV must have a header row with <strong>these exact column names</strong> (order doesn't matter):</p>
-            <table style="font-size:12px;width:100%;border-collapse:collapse;">
-              <thead><tr style="border-bottom:1px solid var(--border);"><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Column</th><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Required?</th><th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Example</th></tr></thead>
-              <tbody>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">email</code></td><td style="padding:6px 8px;color:var(--success);">✅ Yes</td><td style="padding:6px 8px;color:var(--muted);">john@acme.com</td></tr>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">first_name</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">John</td></tr>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">last_name</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">Smith</td></tr>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">company</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">Acme Corp</td></tr>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">role</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">CTO</td></tr>
-                <tr style="border-bottom:1px solid rgba(0,0,0,.04);"><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">status</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);"><code>sent</code> or <code>pending</code></td></tr>
-                <tr><td style="padding:6px 8px;"><code style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">industry</code></td><td style="padding:6px 8px;color:var(--muted);">Optional</td><td style="padding:6px 8px;color:var(--muted);">FinTech</td></tr>
-              </tbody>
-            </table>
-            <p style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Tip: If a <strong>status</strong> column is present and equals <code>sent</code>, those leads will be marked as already sent and skipped in future campaigns. If status is omitted or <code>pending</code>, they'll be queued normally.</p>
-          </div>
-          <label class="btn btn-ghost" style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
-            📂 Upload Previous Sent Data (.csv)
-            <input type="file" accept=".csv" style="display:none;" onchange="uploadCSV(this)">
-          </label>
-          <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">Duplicate emails (already in the database) will be skipped automatically.</div>
-        </div>
-      </div>
-
-      <div class="panel-grid">
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">📥 Export Records (CSV)</span></div>
-          <div class="panel-body" style="display:flex;flex-direction:column;gap:0;">
-
-            <div class="download-card">
-              <div class="download-card-icon">👥</div>
-              <div class="download-card-info">
-                <div class="download-card-title">All Leads</div>
-                <div class="download-card-desc">Every contact in your database — name, email, company, role, industry,
-                  location, status. Perfect for importing into another tool or sharing with your team.</div>
+          <div class="panel-body">
+            <div id="records-summary"
+              style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">👥</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-leads">—</div>
+                <div style="font-size:12px;color:var(--muted);">Total Leads</div>
               </div>
-              <a href="/api/leads/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇ Download</a>
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">⏳</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-pending">—</div>
+                <div style="font-size:12px;color:var(--muted);">Pending</div>
+              </div>
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">📤</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-sent">—</div>
+                <div style="font-size:12px;color:var(--muted);">Emails Sent</div>
+              </div>
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">💬</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-replies">—</div>
+                <div style="font-size:12px;color:var(--muted);">Replies</div>
+              </div>
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">❌</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-failed">—</div>
+                <div style="font-size:12px;color:var(--muted);">Failed</div>
+              </div>
+              <div
+                style="text-align:center;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+                <div style="font-size:28px;">📬</div>
+                <div style="font-weight:700;font-size:22px;" id="rec-accounts">—</div>
+                <div style="font-size:12px;color:var(--muted);">Active Inboxes</div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div class="download-card">
-              <div class="download-card-icon">📤</div>
-              <div class="download-card-info">
-                <div class="download-card-title">Sent Campaigns</div>
-                <div class="download-card-desc">A log of every email sent — which lead received it, what email account
-                  sent it, the subject line, timestamp, and any errors. Essential for compliance and outreach auditing.
+        <!-- Upload Previous Sent Data -->
+        <div class="panel" style="margin-bottom:20px;">
+          <div class="panel-header"><span class="panel-title">📂 Import Previous Sent Data (CSV)</span></div>
+          <div class="panel-body">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+              Already sent emails from another tool or a previous campaign? Upload a CSV to import those records so the
+              system knows which leads have already been contacted and won't email them again.
+            </p>
+            <div
+              style="padding:14px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:14px;">
+              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📋 Required CSV Format</div>
+              <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Your CSV must have a header row with
+                <strong>these exact column names</strong> (order doesn't matter):</p>
+              <table style="font-size:12px;width:100%;border-collapse:collapse;">
+                <thead>
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Column</th>
+                    <th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Required?</th>
+                    <th style="padding:6px 8px;text-align:left;color:var(--muted);font-weight:600;">Example</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">email</code></td>
+                    <td style="padding:6px 8px;color:var(--success);">✅ Yes</td>
+                    <td style="padding:6px 8px;color:var(--muted);">john@acme.com</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">first_name</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);">John</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">last_name</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);">Smith</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">company</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);">Acme Corp</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">role</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);">CTO</td>
+                  </tr>
+                  <tr style="border-bottom:1px solid rgba(0,0,0,.04);">
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">status</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);"><code>sent</code> or <code>pending</code></td>
+                  </tr>
+                  <tr>
+                    <td style="padding:6px 8px;"><code
+                        style="background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">industry</code></td>
+                    <td style="padding:6px 8px;color:var(--muted);">Optional</td>
+                    <td style="padding:6px 8px;color:var(--muted);">FinTech</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p style="font-size:11px;color:var(--muted);margin-top:8px;">💡 Tip: If a <strong>status</strong> column
+                is present and equals <code>sent</code>, those leads will be marked as already sent and skipped in
+                future campaigns. If status is omitted or <code>pending</code>, they'll be queued normally.</p>
+            </div>
+            <label class="btn btn-ghost"
+              style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
+              📂 Upload Previous Sent Data (.csv)
+              <input type="file" accept=".csv" style="display:none;" onchange="uploadCSV(this)">
+            </label>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:center;">Duplicate emails (already
+              in the database) will be skipped automatically.</div>
+          </div>
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">📥 Export Records (CSV)</span></div>
+            <div class="panel-body" style="display:flex;flex-direction:column;gap:0;">
+
+              <div class="download-card">
+                <div class="download-card-icon">👥</div>
+                <div class="download-card-info">
+                  <div class="download-card-title">All Leads</div>
+                  <div class="download-card-desc">Every contact in your database — name, email, company, role, industry,
+                    location, status. Perfect for importing into another tool or sharing with your team.</div>
+                </div>
+                <a href="/api/leads/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇ Download</a>
+              </div>
+
+              <div class="download-card">
+                <div class="download-card-icon">📤</div>
+                <div class="download-card-info">
+                  <div class="download-card-title">Sent Campaigns</div>
+                  <div class="download-card-desc">A log of every email sent — which lead received it, what email account
+                    sent it, the subject line, timestamp, and any errors. Essential for compliance and outreach
+                    auditing.
+                  </div>
+                </div>
+                <a href="/api/campaigns/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇
+                  Download</a>
+              </div>
+
+              <div class="download-card">
+                <div class="download-card-icon">💬</div>
+                <div class="download-card-info">
+                  <div class="download-card-title">Replies Received</div>
+                  <div class="download-card-desc">All inbound replies detected by the system — sender, subject, preview
+                    snippet, and which inbox received it. Use this to track engagement over time.</div>
+                </div>
+                <a href="/api/replies/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇
+                  Download</a>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🗄️ Database Backup (.db)</span></div>
+            <div class="panel-body">
+              <div
+                style="padding:16px;background:rgba(0,112,243,.06);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:16px;">
+                <div style="font-weight:600;font-size:14px;margin-bottom:8px;">What is the database backup?</div>
+                <p style="font-size:13px;color:var(--muted);line-height:1.7;">
+                  The app stores <em>everything</em> — leads, campaigns, replies, email accounts, and settings — in a
+                  single SQLite file called <code
+                    style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">database.db</code>.<br><br>
+                  Downloading this file gives you a <strong>complete snapshot</strong> of the entire system at that
+                  moment. If you ever reinstall the app, move to a new computer, or the data gets corrupted, you can
+                  <strong>restore this file</strong> to pick up exactly where you left off.
+                </p>
+                <div id="db-info-bar" style="margin-top:10px;font-size:11px;color:var(--muted);cursor:pointer;"
+                  onclick="loadDbInfo()">
+                  📂 Click to show database location…
                 </div>
               </div>
-              <a href="/api/campaigns/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇
-                Download</a>
-            </div>
-
-            <div class="download-card">
-              <div class="download-card-icon">💬</div>
-              <div class="download-card-info">
-                <div class="download-card-title">Replies Received</div>
-                <div class="download-card-desc">All inbound replies detected by the system — sender, subject, preview
-                  snippet, and which inbox received it. Use this to track engagement over time.</div>
+              <div
+                style="padding:12px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.2);font-size:12px;">
+                ⚠️ <strong>Tip:</strong> Download a backup before making bulk changes or clearing leads. Store it in
+                Google Drive or Dropbox for safekeeping.
               </div>
-              <a href="/api/replies/export" download class="btn btn-ghost btn-sm" style="flex-shrink:0;">⬇ Download</a>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-header"><span class="panel-title">🗄️ Database Backup (.db)</span></div>
-          <div class="panel-body">
-            <div
-              style="padding:16px;background:rgba(0,112,243,.06);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:16px;">
-              <div style="font-weight:600;font-size:14px;margin-bottom:8px;">What is the database backup?</div>
-              <p style="font-size:13px;color:var(--muted);line-height:1.7;">
-                The app stores <em>everything</em> — leads, campaigns, replies, email accounts, and settings — in a
-                single SQLite file called <code
-                  style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">database.db</code>.<br><br>
-                Downloading this file gives you a <strong>complete snapshot</strong> of the entire system at that
-                moment. If you ever reinstall the app, move to a new computer, or the data gets corrupted, you can
-                <strong>restore this file</strong> to pick up exactly where you left off.
-              </p>
-              <div id="db-info-bar" style="margin-top:10px;font-size:11px;color:var(--muted);cursor:pointer;" onclick="loadDbInfo()">
-                📂 Click to show database location…
+              <a href="/api/db/backup" download class="btn btn-primary"
+                style="width:100%;justify-content:center;font-size:14px;padding:12px;">
+                🗄️ Download Full Database Backup
+              </a>
+              <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
+                <div style="font-weight:600;font-size:13px;margin-bottom:8px;">🔄 Restore from Backup</div>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
+                  Upload a previously downloaded <code
+                    style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">.db</code> file to restore all
+                  data after upgrading or moving to a new machine. Your current data will be replaced.
+                </p>
+                <label class="btn btn-ghost"
+                  style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
+                  📂 Upload Backup File (.db)
+                  <input type="file" accept=".db" style="display:none;" onchange="restoreBackup(this)">
+                </label>
+                <div id="restore-status" style="font-size:12px;margin-top:8px;"></div>
               </div>
-            </div>
-            <div
-              style="padding:12px;background:rgba(245,158,11,.06);border-radius:8px;border:1px solid rgba(245,158,11,.2);font-size:12px;">
-              ⚠️ <strong>Tip:</strong> Download a backup before making bulk changes or clearing leads. Store it in
-              Google Drive or Dropbox for safekeeping.
-            </div>
-            <a href="/api/db/backup" download class="btn btn-primary"
-              style="width:100%;justify-content:center;font-size:14px;padding:12px;">
-              🗄️ Download Full Database Backup
-            </a>
-            <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border);">
-              <div style="font-weight:600;font-size:13px;margin-bottom:8px;">🔄 Restore from Backup</div>
-              <p style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6;">
-                Upload a previously downloaded <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px;">.db</code> file to restore all data after upgrading or moving to a new machine. Your current data will be replaced.
-              </p>
-              <label class="btn btn-ghost" style="width:100%;justify-content:center;font-size:13px;cursor:pointer;padding:10px;">
-                📂 Upload Backup File (.db)
-                <input type="file" accept=".db" style="display:none;" onchange="restoreBackup(this)">
-              </label>
-              <div id="restore-status" style="font-size:12px;margin-top:8px;"></div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
+  </main>
 
   <!-- LEAD DETAIL DRAWER -->
   <div class="drawer-overlay" id="lead-drawer-overlay" onclick="closeLeadDrawer()"></div>
@@ -1625,7 +1696,8 @@
         style="font-weight:700;font-size:15px;margin-bottom:12px;padding:10px 14px;background:var(--surface2);border-radius:8px;">
       </div>
       <div id="preview-content"
-        style="max-height:440px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;"></div>
+        style="max-height:440px;overflow-y:auto;border-radius:8px;border:1px solid var(--border);margin-bottom:16px;">
+      </div>
       <!-- Draft Actions -->
       <div style="padding:12px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;">
         <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:10px;">📥 Save to Drafts Folder</div>
@@ -1638,7 +1710,8 @@
           </button>
         </div>
         <div style="font-size:11px;color:var(--muted);margin-top:6px;">
-          The email will appear in the selected account's <strong>Drafts folder</strong> — open it in Gmail/Outlook to review, edit formatting, and send manually.
+          The email will appear in the selected account's <strong>Drafts folder</strong> — open it in Gmail/Outlook to
+          review, edit formatting, and send manually.
         </div>
       </div>
     </div>
@@ -1648,6 +1721,40 @@
 
   <script>
     const API = '';  // Same origin
+    const HTML_ESCAPE_MAP = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    function escHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, (ch) => HTML_ESCAPE_MAP[ch]);
+    }
+    function safeUrl(url) {
+      const raw = String(url ?? '').trim();
+      if (!raw) return '';
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) return parsed.href;
+      } catch (_) {}
+      return '';
+    }
+    function sanitizePreviewHtml(input) {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = String(input ?? '');
+      tpl.content.querySelectorAll('script,iframe,object,embed,style,link').forEach((el) => el.remove());
+      tpl.content.querySelectorAll('*').forEach((el) => {
+        [...el.attributes].forEach((attr) => {
+          const key = attr.name.toLowerCase();
+          const val = attr.value || '';
+          if (key.startsWith('on')) {
+            el.removeAttribute(attr.name);
+            return;
+          }
+          if (key === 'href' || key === 'src') {
+            const clean = safeUrl(val);
+            if (!clean) el.removeAttribute(attr.name);
+            else el.setAttribute(attr.name, clean);
+          }
+        });
+      });
+      return tpl.innerHTML;
+    }
 
     // ────────────────────────────────
     // NAVIGATION
@@ -1692,7 +1799,10 @@
     function toast(msg, type = 'info') {
       const el = document.createElement('div');
       el.className = `toast ${type}`;
-      el.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ'}</span> ${msg}`;
+      const icon = document.createElement('span');
+      icon.textContent = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ℹ';
+      el.appendChild(icon);
+      el.appendChild(document.createTextNode(' ' + String(msg ?? '')));
       document.getElementById('toast-container').appendChild(el);
       setTimeout(() => el.remove(), 4000);
     }
@@ -1778,7 +1888,13 @@
       tagData[type].forEach((t, i) => {
         const tag = document.createElement('div');
         tag.className = 'tag';
-        tag.innerHTML = `${t} <span class="tag-remove" onclick="removeTag('${type}',${i})">✕</span>`;
+        tag.appendChild(document.createTextNode(String(t)));
+        const close = document.createElement('span');
+        close.className = 'tag-remove';
+        close.textContent = '✕';
+        close.onclick = () => removeTag(type, i);
+        tag.appendChild(document.createTextNode(' '));
+        tag.appendChild(close);
         container.appendChild(tag);
       });
       container.appendChild(input);
@@ -1820,7 +1936,7 @@
         resultsEl.innerHTML = `
           <div style="padding:28px 24px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:10px;margin:16px;">
             <div style="font-weight:700;color:var(--danger);font-size:15px;margin-bottom:8px">⚠️ Apollo Search Failed</div>
-            <div style="font-size:13px;color:var(--text);line-height:1.7;word-break:break-all;">${msg}</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.7;word-break:break-all;">${escHtml(msg)}</div>
             <ul style="margin-top:14px;font-size:12px;color:var(--muted);padding-left:18px;line-height:2;">
               <li>Make sure your <strong>Apollo API key</strong> is set in Settings</li>
               <li>Check you have Apollo credits remaining</li>
@@ -1853,11 +1969,11 @@
         <th style="padding:8px;border-bottom:1px solid var(--border);"></th>
       </tr></thead>
       <tbody>${leads.map((l, i) => `<tr style="border-bottom:1px solid rgba(0,0,0,.05);">
-        <td style="padding:8px;font-weight:500;">${l.first_name || l.first || ''} ${l.last_name || l.last || ''}</td>
-        <td style="padding:8px;">${l.company || '—'}</td>
-        <td style="padding:8px;color:var(--muted);">${l.role || '—'}</td>
-        <td style="padding:8px;color:var(--muted);">${l.location || '—'}</td>
-        <td style="padding:8px;color:var(--muted);">${l.industry || '—'}</td>
+        <td style="padding:8px;font-weight:500;">${escHtml((l.first_name || l.first || '') + ' ' + (l.last_name || l.last || ''))}</td>
+        <td style="padding:8px;">${escHtml(l.company || '—')}</td>
+        <td style="padding:8px;color:var(--muted);">${escHtml(l.role || '—')}</td>
+        <td style="padding:8px;color:var(--muted);">${escHtml(l.location || '—')}</td>
+        <td style="padding:8px;color:var(--muted);">${escHtml(l.industry || '—')}</td>
         <td style="padding:8px;text-align:right;"><button class="btn btn-ghost btn-sm" onclick="openLeadDrawer(${i})">Details ›</button></td>
       </tr>`).join('')}</tbody>
     </table>
@@ -1890,13 +2006,13 @@
         tbody.innerHTML = r.leads.length === 0
           ? '<tr><td colspan="7" style="text-align:center;padding:30px;color:var(--muted);">No leads yet. Search Apollo first.</td></tr>'
           : r.leads.map(l => `<tr>
-          <td>${l.email}</td>
-          <td>${l.first_name || ''} ${l.last_name || ''}</td>
-          <td>${l.company || ''}</td>
-          <td style="color:var(--muted)">${l.role || ''}</td>
-          <td style="color:var(--muted)">${l.location || ''}</td>
-          <td style="color:var(--muted)">${l.industry || ''}</td>
-          <td><span class="status-badge ${l.status}">${l.status}</span></td>
+          <td>${escHtml(l.email)}</td>
+          <td>${escHtml((l.first_name || '') + ' ' + (l.last_name || ''))}</td>
+          <td>${escHtml(l.company || '')}</td>
+          <td style="color:var(--muted)">${escHtml(l.role || '')}</td>
+          <td style="color:var(--muted)">${escHtml(l.location || '')}</td>
+          <td style="color:var(--muted)">${escHtml(l.industry || '')}</td>
+          <td><span class="status-badge ${escHtml(l.status)}">${escHtml(l.status)}</span></td>
         </tr>`).join('');
       } catch (e) { toast(e.message, 'error'); }
     }
@@ -1907,9 +2023,11 @@
     function openLeadDrawer(idx) {
       const l = (window._apolloLeads || [])[idx];
       if (!l) return;
-      const f = (v) => v ? `<span class="val">${v}</span>` : `<span class="val" style="color:var(--muted)">—</span>`;
+      const f = (v) => v ? `<span class="val">${escHtml(v)}</span>` : `<span class="val" style="color:var(--muted)">—</span>`;
+      const website = safeUrl(l.website);
+      const linkedin = safeUrl(l.linkedin);
       document.getElementById('lead-drawer-body').innerHTML = `
-        <div class="drawer-field"><label>Full Name</label>${f((l.first_name || l.first || '') + ' ' + (l.last_name || l.last || ''))}</div>
+        <div class="drawer-field"><label>Full Name</label>${f(((l.first_name || l.first || '') + ' ' + (l.last_name || l.last || '')).trim())}</div>
         <div class="drawer-field"><label>Email</label>${f(l.email)}</div>
         <div class="drawer-field"><label>Company</label>${f(l.company)}</div>
         <div class="drawer-field"><label>Role / Title</label>${f(l.role)}</div>
@@ -1918,8 +2036,8 @@
         <div class="drawer-field"><label>Location</label>${f(l.location)}</div>
         <div class="drawer-field"><label>Employees</label>${f(l.employees)}</div>
         <hr class="drawer-divider">
-        ${l.website ? `<div class="drawer-field"><label>Website</label><a href="${l.website}" target="_blank" class="val" style="color:var(--accent);">${l.website}</a></div>` : ''}
-        ${l.linkedin ? `<div class="drawer-field"><label>LinkedIn</label><a href="${l.linkedin}" target="_blank" class="val" style="color:var(--accent);">View Profile</a></div>` : ''}
+        ${website ? `<div class="drawer-field"><label>Website</label><a href="${website}" target="_blank" class="val" style="color:var(--accent);">${escHtml(website)}</a></div>` : ''}
+        ${linkedin ? `<div class="drawer-field"><label>LinkedIn</label><a href="${linkedin}" target="_blank" class="val" style="color:var(--accent);">View Profile</a></div>` : ''}
         <hr class="drawer-divider">
         <div class="drawer-field"><label>Status in DB</label>${f(l.status || 'imported')}</div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" onclick="showPage('outbox');closeLeadDrawer();">→ Go to Send Emails</button>
@@ -1952,12 +2070,12 @@
         tbody.innerHTML = r.leads.map(l => `<tr data-id="${l.id}">
           <td class="cb-cell"><input type="checkbox" class="lead-cb" value="${l.id}" ${_selectedLeadIds.has(l.id) ? 'checked' : ''} onchange="toggleLeadCb(this)"></td>
           <td class="drag-handle" title="Drag to reorder">☰</td>
-          <td>${l.email}</td>
-          <td>${l.company || ''}</td>
-          <td style="color:var(--muted)">${l.role || ''}</td>
-          <td><span class="status-badge ${l.status}">${l.status}</span></td>
-          <td style="color:var(--muted);font-size:12px">${l.sent_from || '—'}</td>
-          <td style="color:var(--muted);font-size:12px">${l.created_at ? new Date(l.created_at).toLocaleTimeString() : '—'}</td>
+          <td>${escHtml(l.email)}</td>
+          <td>${escHtml(l.company || '')}</td>
+          <td style="color:var(--muted)">${escHtml(l.role || '')}</td>
+          <td><span class="status-badge ${escHtml(l.status)}">${escHtml(l.status)}</span></td>
+          <td style="color:var(--muted);font-size:12px">${escHtml(l.sent_from || '—')}</td>
+          <td style="color:var(--muted);font-size:12px">${escHtml(l.created_at ? new Date(l.created_at).toLocaleTimeString() : '—')}</td>
         </tr>`).join('');
 
         // Init SortableJS drag-to-reorder
@@ -2006,8 +2124,8 @@
         const accounts = (r.accounts || []);
         // keep round-robin as default first option
         sel.innerHTML = '<option value="">🔄 Round-Robin (auto-cycle all verified)</option>' +
-          accounts.map(a => `<option value="${a.id}">${a.display_name || a.email} &lt;${a.email}&gt; · ${a.provider}</option>`).join('');
-      } catch (_) {}
+          accounts.map(a => `<option value="${a.id}">${escHtml(a.display_name || a.email)} &lt;${escHtml(a.email)}&gt; · ${escHtml(a.provider)}</option>`).join('');
+      } catch (_) { }
     }
 
     async function startSending() {
@@ -2058,7 +2176,7 @@
         _previewLead = lead;
         const res = await api('/api/preview', 'POST', lead);
         document.getElementById('preview-subject').textContent = '📧 ' + res.subject;
-        document.getElementById('preview-content').innerHTML = res.bodyHtml;
+        document.getElementById('preview-content').innerHTML = sanitizePreviewHtml(res.bodyHtml);
 
         // Populate account selector for draft saving
         try {
@@ -2069,10 +2187,10 @@
             sel.innerHTML = '<option value="">No Gmail/Outlook accounts (add one first)</option>';
           } else {
             sel.innerHTML = smtpAccounts.map(a =>
-              `<option value="${a.id}">${a.email} (${a.provider})</option>`
+              `<option value="${a.id}">${escHtml(a.email)} (${escHtml(a.provider)})</option>`
             ).join('');
           }
-        } catch (_) {}
+        } catch (_) { }
 
         document.getElementById('preview-modal').classList.add('open');
       } catch (e) {
@@ -2114,11 +2232,11 @@
         tbody.innerHTML = r.replies.length === 0
           ? '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">No replies yet.</td></tr>'
           : r.replies.map(rep => `<tr>
-          <td>${rep.from_email}</td>
-          <td>${rep.subject || ''}</td>
-          <td style="font-size:12px;color:var(--muted)">${rep.inbox_account || ''}</td>
-          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${rep.snippet || ''}</td>
-          <td style="font-size:12px;color:var(--muted)">${rep.received_at ? new Date(rep.received_at).toLocaleString() : ''}</td>
+          <td>${escHtml(rep.from_email)}</td>
+          <td>${escHtml(rep.subject || '')}</td>
+          <td style="font-size:12px;color:var(--muted)">${escHtml(rep.inbox_account || '')}</td>
+          <td style="font-size:12px;color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(rep.snippet || '')}</td>
+          <td style="font-size:12px;color:var(--muted)">${escHtml(rep.received_at ? new Date(rep.received_at).toLocaleString() : '')}</td>
         </tr>`).join('');
       } catch (e) { }
     }
@@ -2153,8 +2271,8 @@
       <div class="inbox-card connected" id="inbox-card-${a.id}">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
           <div>
-            <div class="inbox-email">${a.email}</div>
-            <div class="inbox-name">${a.display_name || a.email} · ${a.provider}</div>
+            <div class="inbox-email">${escHtml(a.email)}</div>
+            <div class="inbox-name">${escHtml(a.display_name || a.email)} · ${escHtml(a.provider)}</div>
           </div>
           <span class="badge green" id="inbox-status-${a.id}">Active</span>
         </div>
@@ -2287,7 +2405,7 @@
         const sel = document.getElementById('new-acc-provider');
         sel.value = r.provider;
         toggleProviderHint(r.provider);
-        resultEl.innerHTML = `✅ Detected: <strong>${r.label}</strong> — ${r.description}`;
+        resultEl.innerHTML = `✅ Detected: <strong>${escHtml(r.label)}</strong> — ${escHtml(r.description)}`;
         resultEl.style.color = 'var(--success)';
       } catch (e) {
         resultEl.textContent = 'Could not auto-detect: ' + e.message;
@@ -2382,15 +2500,59 @@
     // ────────────────────────────────
     // RECORDS PAGE
     // ────────────────────────────────
+    function ensureRecordsLayout() {
+      const page = document.getElementById('page-records');
+      if (!page) return;
+      if (document.getElementById('rec-leads') && document.getElementById('db-info-bar')) return;
+
+      page.innerHTML = `
+        <div class="content">
+          <div style="margin-bottom:18px;">
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;margin-bottom:6px;">Records &amp; Backup</div>
+            <p style="font-size:13px;color:var(--muted);">Page auto-recovered. Your data and backup actions are available below.</p>
+          </div>
+          <div class="panel" style="margin-bottom:16px;">
+            <div class="panel-header">
+              <span class="panel-title">📊 Current Database Summary</span>
+              <button class="btn btn-ghost btn-sm" onclick="loadRecords()">🔄 Refresh</button>
+            </div>
+            <div class="panel-body">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-leads">—</div><small>Total</small></div>
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-pending">—</div><small>Pending</small></div>
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-sent">—</div><small>Sent</small></div>
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-replies">—</div><small>Replies</small></div>
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-failed">—</div><small>Failed</small></div>
+                <div style="text-align:center;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);"><div id="rec-accounts">—</div><small>Accounts</small></div>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🗄️ Database Backup</span></div>
+            <div class="panel-body" style="display:grid;gap:10px;">
+              <a href="/api/db/backup" download class="btn btn-primary" style="justify-content:center;">🗄️ Download Full Database Backup</a>
+              <label class="btn btn-ghost" style="justify-content:center;cursor:pointer;">
+                📂 Upload Backup File (.db)
+                <input type="file" accept=".db" style="display:none;" onchange="restoreBackup(this)">
+              </label>
+              <div id="db-info-bar" style="font-size:12px;color:var(--muted);">📂 Loading database location…</div>
+              <div id="restore-status" style="font-size:12px;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     async function loadRecords() {
+      ensureRecordsLayout();
       try {
         const s = await api('/api/stats');
         const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
-        setEl('rec-leads',    s.total_leads   ?? '—');
-        setEl('rec-pending',  s.pending       ?? '—');
-        setEl('rec-sent',     s.sent          ?? '—');
-        setEl('rec-replies',  s.replied       ?? '—');
-        setEl('rec-failed',   s.failed        ?? '—');
+        setEl('rec-leads', s.total_leads ?? '—');
+        setEl('rec-pending', s.pending ?? '—');
+        setEl('rec-sent', s.sent ?? '—');
+        setEl('rec-replies', s.replied ?? '—');
+        setEl('rec-failed', s.failed ?? '—');
         setEl('rec-accounts', s.active_accounts ?? '—');
       } catch (e) { toast('Could not load records summary', 'error'); }
       loadDbInfo();
@@ -2404,7 +2566,7 @@
       if (!el) return;
       try {
         const r = await api('/api/db/info');
-        el.innerHTML = `📂 <strong>Database location:</strong> <span style="font-family:monospace;word-break:break-all;">${r.db_path}</span> &nbsp;·&nbsp; ${r.size_mb} MB`;
+        el.innerHTML = `📂 <strong>Database location:</strong> <span style="font-family:monospace;word-break:break-all;">${escHtml(r.db_path)}</span> &nbsp;·&nbsp; ${escHtml(r.size_mb)} MB`;
         el.style.cursor = 'default';
         el.onclick = null;
       } catch (e) { el.textContent = 'Could not load DB info: ' + e.message; }

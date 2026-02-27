@@ -1,6 +1,6 @@
 {
   "name": "cyberarc-outreach",
-  "version": "2.3.0",
+  "version": "2.3.3",
   "description": "CyberArc MSP — AI-Powered B2B Email Outreach Platform",
   "homepage": "https://cyberarcmsp.com",
   "main": "electron/main.js",
@@ -66,6 +66,16 @@
         "to": "app/ui",
         "filter": [
           "**/*"
+        ]
+      },
+      {
+        "from": "bundled-python",
+        "to": "app/bundled-python",
+        "filter": [
+          "**",
+          "!**/__pycache__/**",
+          "!**/*.pyc",
+          "!**/*.pyo"
         ]
       }
     ],
