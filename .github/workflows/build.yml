@@ -129,25 +129,38 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
-          # Locate the uv-managed Python exe and resolve to real path
-          $UV_PY = (uv python find 3.12).Trim()
-          Write-Host "uv Python: $UV_PY"
-          $REAL_PY = (Resolve-Path $UV_PY).Path
-          $UV_DIR  = Split-Path -Parent $REAL_PY
+          # uv python find returns the .venv shim on Windows, NOT the real install.
+          # Use "uv python dir" to get the uv-managed Python installations root,
+          # then find the cpython-3.12 folder inside it.
+          $UV_PY_DIR = (uv python dir).Trim()
+          Write-Host "uv Python store: $UV_PY_DIR"
+
+          $PY_INSTALL = Get-ChildItem "$UV_PY_DIR" -Directory -Filter "cpython-3.12*" |
+            Sort-Object Name -Descending | Select-Object -First 1
+
+          if (-not $PY_INSTALL) {
+            Write-Error "Could not find cpython-3.12 in $UV_PY_DIR — aborting"
+            exit 1
+          }
+          $UV_DIR = $PY_INSTALL.FullName
           Write-Host "Python installation dir: $UV_DIR"
 
-          # Copy entire installation: python.exe + python312.dll + Lib/ + DLLs/
+          # robocopy is more reliable than Copy-Item for large recursive copies.
+          # Exit codes 0-7 are success (8+ = errors).
           New-Item -ItemType Directory -Force -Path bundled-python | Out-Null
-          Copy-Item -Recurse -Force "$UV_DIR\*" bundled-python\
+          robocopy "$UV_DIR" "bundled-python" /E /NFL /NDL /NJH /NJS
+          if ($LASTEXITCODE -ge 8) { throw "robocopy failed with exit $LASTEXITCODE" }
 
           # Merge .venv site-packages (uvicorn, fastapi, etc.) into bundled Python
           $SRC = ".venv\Lib\site-packages"
           $DST = "bundled-python\Lib\site-packages"
           if (Test-Path $SRC) {
             Write-Host "Merging site-packages -> $DST"
-            Copy-Item -Recurse -Force "$SRC\*" $DST\
+            New-Item -ItemType Directory -Force -Path $DST | Out-Null
+            robocopy "$SRC" "$DST" /E /NFL /NDL /NJH /NJS
+            if ($LASTEXITCODE -ge 8) { throw "robocopy site-packages failed with exit $LASTEXITCODE" }
           } else {
-            Write-Host "WARNING: $SRC not found"
+            Write-Host "WARNING: $SRC not found — deps may be missing"
           }
 
           # Smoke-test: verify the bundled exe can import our key packages

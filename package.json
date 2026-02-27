@@ -1,6 +1,6 @@
 {
   "name": "cyberarc-outreach",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "description": "CyberArc MSP — AI-Powered B2B Email Outreach Platform",
   "homepage": "https://cyberarcmsp.com",
   "main": "electron/main.js",
