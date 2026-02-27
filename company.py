@@ -15,7 +15,7 @@ COMPANY_PROFILE = {
     "name":      "CyberArc MSP",
     "website":   "https://cyberarcmsp.com",
     "logo_url":  "https://cyberarcmsp.com/logo.png",
-    "calendly":  "https://calendly.com/cyberarcmsp/30min",
+    "calendly":  "https://calendly.com/contact-cyberarcmsp/30min",
     "offices":   "Hyderabad • London • Dubai • Toronto • Wyoming • Melbourne",
     "tagline":   "Enterprise-Grade Security & Technology for the Modern Enterprise",
 }
