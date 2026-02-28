@@ -8,6 +8,6 @@ class AccountRepository(BaseRepository[EmailAccount]):
         super().__init__(EmailAccount)
         
     def get_active_accounts(self, session: Session) -> List[EmailAccount]:
-        return session.exec(select(EmailAccount).where(EmailAccount.is_active == True)).all()
+        return session.exec(select(EmailAccount).where(EmailAccount.is_active)).all()
 
 account_repository = AccountRepository()

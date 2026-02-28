@@ -29,7 +29,8 @@ def _migrate_legacy_db_if_needed():
         os.path.join(home, ".config", "CyberArc Outreach", "database.db"),
     ]
     for source in candidates:
-        if source == target: continue
+        if source == target:
+            continue
         try:
             if os.path.exists(source) and os.path.getsize(source) > 0:
                 shutil.copy2(source, target)

@@ -1,4 +1,3 @@
-import os
 import io
 import csv
 from datetime import datetime, timezone

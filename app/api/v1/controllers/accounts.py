@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.api.dependencies import get_db_session
 from app.models.email_account import EmailAccount
 from app.schemas.account import AccountIn
