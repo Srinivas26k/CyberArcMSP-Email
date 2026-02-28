@@ -66,16 +66,21 @@ async def start_campaign(req: CampaignRequest, session: Session = Depends(get_db
     }
 
     campaign_state.set_running(True)
-    campaign_state.task = asyncio.create_task(
-        campaign_service.run_campaign_batch(
-            [lead.id for lead in leads],
-            req.delay_seconds,
-            [a.id for a in accs],
-            runtime_cfg,
-            broadcast,
-            campaign_state.is_running
-        )
-    )
+    
+    async def _campaign_runner():
+        try:
+            await campaign_service.run_campaign_batch(
+                [lead.id for lead in leads],
+                req.delay_seconds,
+                [a.id for a in accs],
+                runtime_cfg,
+                broadcast,
+                campaign_state.is_running
+            )
+        finally:
+            campaign_state.set_running(False)
+            
+    campaign_state.task = asyncio.create_task(_campaign_runner())
     return {"status": "started", "lead_count": len(leads), "strategy": req.strategy}
 
 @router.post("/stop")
