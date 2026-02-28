@@ -24,8 +24,8 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 GROQ_MODELS = [
-    "moonshotai/kimi-k2-instruct",
     "llama-3.3-70b-versatile",
+    "moonshotai/kimi-k2-instruct",
     "llama-3.1-8b-instant",
     "gemma2-9b-it",
 ]
@@ -76,7 +76,7 @@ def _extract_json(raw: str) -> dict:
     end = raw.rfind("}")
     if start == -1 or end == -1:
         raise ValueError(f"No JSON object found in LLM output: {raw[:200]}")
-    return json.loads(raw[start:end + 1])
+    return json.loads(raw[start:end + 1], strict=False)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
