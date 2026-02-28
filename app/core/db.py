@@ -42,11 +42,6 @@ engine = create_engine(
 def init_db():
     """Create all tables. Called once on startup."""
     # Import models so SQLModel.metadata is populated
-    import models  # noqa: F401 — side-effect import
+    import app.models  # noqa: F401
+    from sqlmodel import SQLModel
     SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    """FastAPI dependency — yields a DB session and closes it after the request."""
-    with Session(engine) as session:
-        yield session
