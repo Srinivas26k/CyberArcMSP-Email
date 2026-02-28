@@ -11,6 +11,7 @@ from app.utils.prompt import build_email_prompt
 from app.utils.company import wrap_email_template
 from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
 import re
+import random
 
 import logging
 logger = logging.getLogger(__name__)
@@ -57,9 +58,11 @@ class CampaignService:
                     batch_size=int(cfg.get("batch_size", 5)),
                 )
 
-            for lead_id in lead_ids:
+            for i, lead_id in enumerate(lead_ids, 1):
                 if not running_flag_check():
                     break
+                    
+                await broadcast_cb("stat", {"message": f"Drafting email {i} of {len(lead_ids)}..."})
 
                 with Session(engine) as session:
                     lead = session.get(Lead, lead_id)
@@ -207,7 +210,16 @@ class CampaignService:
                     await broadcast_cb("lead_update", {"lead_id": lead_id, "status": "failed",
                                                       "error": str(exc)[:200]})
 
-                await asyncio.sleep(delay)
+                # Adaptive Delay: Randomized delay between sends to mimic human behavior and avoid SMTP flagging
+                if i < len(lead_ids):
+                    actual_delay = random.randint(60, 120) if delay <= 0 else delay
+                    await broadcast_cb("stat", {"message": f"Adaptive Delay: Waiting {actual_delay}s before next send..."})
+                    
+                    # Sleep in 1-second chunks so we can interrupt immediately if stopped
+                    for _ in range(actual_delay):
+                        if not running_flag_check():
+                            break
+                        await asyncio.sleep(1)
 
         finally:
             await broadcast_cb("campaign_done", {"message": "Campaign finished"})
