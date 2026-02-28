@@ -20,4 +20,4 @@ database.db
 .env
 
 tests
-*.md
+# *.md
