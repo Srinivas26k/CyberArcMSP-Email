@@ -1,5 +1,4 @@
-import os
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session, select
 from app.api.dependencies import get_db_session
 from app.models.setting import Setting

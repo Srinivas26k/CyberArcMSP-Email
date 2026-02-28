@@ -8,7 +8,7 @@ router = APIRouter()
 
 @router.get("/health")
 def health(session: Session = Depends(get_db_session)):
-    accounts = session.exec(select(EmailAccount).where(EmailAccount.is_active == True)).all()
+    accounts = session.exec(select(EmailAccount).where(EmailAccount.is_active)).all()
     leads = session.exec(select(Lead)).all()
     return {
         "status": "ok",
@@ -26,7 +26,7 @@ def dashboard_stats(session: Session = Depends(get_db_session)):
     sent = sum(1 for lead in leads if lead.status == "sent")
     failed = sum(1 for lead in leads if lead.status == "failed")
     
-    accounts = session.exec(select(EmailAccount).where(EmailAccount.is_active == True)).all()
+    accounts = session.exec(select(EmailAccount).where(EmailAccount.is_active)).all()
     
     return {
         "total": total,

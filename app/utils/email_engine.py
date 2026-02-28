@@ -33,12 +33,15 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _smtp_host(provider: str) -> str:
-    if provider == "gmail":   return "smtp.gmail.com"
-    if provider == "m365":    return "smtp.office365.com"
+    if provider == "gmail":
+        return "smtp.gmail.com"
+    if provider == "m365":
+        return "smtp.office365.com"
     return "smtp-mail.outlook.com"   # outlook (O365 personal/business)
 
 def _imap_host(provider: str) -> str:
-    if provider == "gmail":   return "imap.gmail.com"
+    if provider == "gmail":
+        return "imap.gmail.com"
     return "outlook.office365.com"   # m365 and outlook share the same IMAP host
 
 RESEND_SEND_URL = "https://api.resend.com/emails"

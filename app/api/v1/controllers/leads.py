@@ -1,7 +1,5 @@
-import csv
-import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from sqlmodel import Session, select
+from sqlmodel import Session
 from app.api.dependencies import get_db_session
 from app.models.lead import Lead
 from app.schemas.lead import LeadIn, ApolloQuery
@@ -29,7 +27,7 @@ def _lead_to_dict(lead: Lead) -> dict:
 def list_leads(session: Session = Depends(get_db_session)):
     leads = lead_repository.get_all(session)
     # Simple mapping without join for now
-    res = [_lead_to_dict(l) for l in leads]
+    res = [_lead_to_dict(lead) for lead in leads]
     return {"leads": res, "total": len(leads)}
 
 @router.post("/", status_code=201)
@@ -58,8 +56,8 @@ def delete_lead(lead_id: int, session: Session = Depends(get_db_session)):
 @router.delete("/")
 def delete_all_leads(session: Session = Depends(get_db_session)):
     leads = lead_repository.get_all(session)
-    for l in leads:
-        lead_repository.remove(session, l.id)
+    for lead in leads:
+        lead_repository.remove(session, lead.id)
     return {"deleted": len(leads)}
 
 @router.post("/apollo/search")

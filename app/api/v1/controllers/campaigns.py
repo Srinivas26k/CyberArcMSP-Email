@@ -68,7 +68,7 @@ async def start_campaign(req: CampaignRequest, session: Session = Depends(get_db
     campaign_state.set_running(True)
     campaign_state.task = asyncio.create_task(
         campaign_service.run_campaign_batch(
-            [l.id for l in leads],
+            [lead.id for lead in leads],
             req.delay_seconds,
             [a.id for a in accs],
             runtime_cfg,
