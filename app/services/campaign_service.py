@@ -9,6 +9,7 @@ from app.utils.email_engine import EmailEngine
 from app.utils.llm_client import generate_email
 from app.utils.prompt import build_email_prompt
 from app.utils.company import COMPANY_PROFILE, SENDER_DEFAULTS, wrap_email_template
+from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
 import re
 
 import logging
@@ -75,14 +76,36 @@ class CampaignService:
                         lead = session.get(Lead, lead_id)
                         lead_data = CampaignService._lead_to_dict(lead)
 
-                    sys_p, usr_p = build_email_prompt(lead_data)
-                    pkg = await generate_email(
-                        sys_p, usr_p,
-                        groq_key=cfg.get("groq_key", ""),
-                        openrouter_key=cfg.get("openrouter_key", ""),
-                        preferred_provider=cfg.get("llm_provider", "groq"),
-                        openrouter_model=cfg.get("openrouter_model") or None,
-                    )
+                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data)
+                    sanitized_lead_data = PayloadSanitizer.truncate_context(lead_data, usr_p_temp, max_chars=4000)
+                    sys_p, usr_p = build_email_prompt(sanitized_lead_data)
+                    
+                    pkg = None
+                    for attempt in range(2):
+                        pkg = await generate_email(
+                            sys_p, usr_p,
+                            groq_key=cfg.get("groq_key", ""),
+                            openrouter_key=cfg.get("openrouter_key", ""),
+                            preferred_provider=cfg.get("llm_provider", "groq"),
+                            openrouter_model=cfg.get("openrouter_model") or None,
+                        )
+                        
+                        temp_plain = CampaignService._html_to_plain(pkg["bodyHtml"])
+                        
+                        spam_matches = PayloadSanitizer.has_spam_keywords(temp_plain)
+                        if spam_matches:
+                            raise PayloadSanitizationError(f"422 Unprocessable LLM Output: Spam keywords detected: {', '.join(spam_matches)}")
+                            
+                        is_personalized = PayloadSanitizer.verify_personalization(
+                            temp_plain, 
+                            lead_data.get("first_name", ""), 
+                            lead_data.get("company", "")
+                        )
+                        
+                        if is_personalized:
+                            break
+                        if attempt == 1:
+                            raise PersonalizationError("422 Unprocessable Output: LLM failed to personalize the email with first name or company.")
                     
                     html_body = wrap_email_template(
                         pkg["bodyHtml"],

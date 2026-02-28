@@ -50,10 +50,21 @@ class LeadService:
             "num employees": "employees","# employees": "employees",
         }
         
+        if not reader.fieldnames:
+            from fastapi import HTTPException
+            raise HTTPException(422, "CSV file is completely empty or invalid.")
+
+        normalized_fields = [ALIAS.get(str(f).strip().lower(), str(f).strip().lower().replace(" ", "_")) for f in reader.fieldnames]
+        if "email" not in normalized_fields:
+            from fastapi import HTTPException
+            raise HTTPException(422, "Malformed CSV: 'email' column is required.")
+        
         processed_data = []
         for row in reader:
             norm = {}
             for k, v in row.items():
+                if k is None:
+                    continue
                 k_low = k.strip().lower()
                 norm[ALIAS.get(k_low, k_low.replace(" ", "_"))] = (v or "").strip()
             processed_data.append(norm)
