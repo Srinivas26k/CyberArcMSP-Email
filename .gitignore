@@ -18,3 +18,6 @@ bundled-python/
 node_modules
 database.db
 .env
+
+tests
+*.md

@@ -11,8 +11,7 @@ The path can be overridden by setting the APP_DATA_DIR environment variable
 (Electron sets this automatically so the Python server knows where to look).
 """
 import os
-import sys
-from sqlmodel import SQLModel, create_engine, Session
+from sqlmodel import SQLModel, create_engine
 
 
 def _resolve_db_path() -> str:
@@ -42,11 +41,5 @@ engine = create_engine(
 def init_db():
     """Create all tables. Called once on startup."""
     # Import models so SQLModel.metadata is populated
-    import models  # noqa: F401 — side-effect import
+    import app.models  # noqa: F401
     SQLModel.metadata.create_all(engine)
-
-
-def get_session():
-    """FastAPI dependency — yields a DB session and closes it after the request."""
-    with Session(engine) as session:
-        yield session

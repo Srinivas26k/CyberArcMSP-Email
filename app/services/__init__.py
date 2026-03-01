@@ -1,0 +1,7 @@
+from app.services.lead_service import lead_service
+from app.services.campaign_service import campaign_service
+
+__all__ = [
+    "lead_service",
+    "campaign_service"
+]

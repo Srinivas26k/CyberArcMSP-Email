@@ -9,7 +9,7 @@ Key design principles:
 """
 import re
 from datetime import datetime
-from company import SERVICE_PORTFOLIO
+from app.utils.company import SERVICE_PORTFOLIO
 
 
 # ─────────────────────────────────────────────────────────────────────────────
