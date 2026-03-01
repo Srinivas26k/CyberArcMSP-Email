@@ -130,21 +130,49 @@
         <button class="btn btn--ghost btn--sm" id="dash-refresh-btn">↺ Refresh</button>
       </div>
       <div class="grid grid--4" style="margin-bottom:20px;">
-        <div class="stat-card"><span class="stat-card__label">Total Leads</span><span class="stat-card__value" id="s-leads">—</span></div>
-        <div class="stat-card"><span class="stat-card__label">Emails Sent</span><span class="stat-card__value" id="s-sent">—</span></div>
-        <div class="stat-card"><span class="stat-card__label">Replies</span><span class="stat-card__value" id="s-replies">—</span></div>
-        <div class="stat-card"><span class="stat-card__label">Active Inboxes</span><span class="stat-card__value" id="s-inboxes">—</span></div>
+        <div class="stat-card">
+          <span class="stat-card__icon">👥</span>
+          <span class="stat-card__label">Total Leads</span>
+          <span class="stat-card__value" id="s-leads">—</span>
+          <span class="stat-card__sub" id="s-leads-sub">in database</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__icon">✉️</span>
+          <span class="stat-card__label">Emails Sent</span>
+          <span class="stat-card__value" id="s-sent">—</span>
+          <span class="stat-card__sub" id="s-sent-sub">delivered</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__icon">💬</span>
+          <span class="stat-card__label">Replies</span>
+          <span class="stat-card__value" id="s-replies">—</span>
+          <span class="stat-card__sub" id="s-replies-sub">received</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__icon">📬</span>
+          <span class="stat-card__label">Active Inboxes</span>
+          <span class="stat-card__value" id="s-inboxes">—</span>
+          <span class="stat-card__sub" id="s-inboxes-sub">sending accounts</span>
+        </div>
       </div>
       <div class="grid grid--2">
         <div class="panel">
           <div class="panel__header"><span>Campaign Progress</span><span class="badge badge--secondary" id="d-pending-badge"></span></div>
           <div class="panel__body">
-            <p class="stat-card__label" style="margin-bottom:6px;">Sent / Total</p>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <p class="stat-card__label" style="margin:0;">Sent / Total</p>
+              <span id="d-progress-pct" style="font-size:11px;font-weight:700;color:var(--brand);">0%</span>
+            </div>
             <div class="progress-bar"><div class="progress-bar__fill" id="d-progress-fill" style="width:0%"></div></div>
             <p id="d-progress-label" style="font-size:12px;color:var(--muted);margin-top:6px;">0 / 0 emails delivered</p>
-            <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
-              <button class="btn btn--sm" onclick="location.hash='#outbox'">Open Outbox →</button>
-              <button class="btn btn--ghost btn--sm" onclick="location.hash='#search'">Find More Leads</button>
+            <div class="campaign-breakdown" id="d-breakdown" style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">
+              <span class="breakdown-pill breakdown-pill--sent" id="d-br-sent">✓ 0 sent</span>
+              <span class="breakdown-pill breakdown-pill--pending" id="d-br-pending">⏳ 0 pending</span>
+              <span class="breakdown-pill breakdown-pill--failed" id="d-br-failed">✕ 0 failed</span>
+            </div>
+            <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn--sm" onclick="location.hash='outbox'">Open Outbox →</button>
+              <button class="btn btn--ghost btn--sm" onclick="location.hash='search'">Find More Leads</button>
             </div>
           </div>
         </div>
@@ -155,6 +183,33 @@
             <div class="health-row" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-size:13px;">Live Updates (SSE)</span><span class="status-badge" id="d-sse-badge">—</span></div>
             <div class="health-row" style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:13px;">AI Model</span><span class="status-badge" id="d-model-badge">—</span></div>
           </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="margin-top:22px;">
+        <p class="stat-card__label" style="margin-bottom:12px;padding-left:2px;">Quick Actions</p>
+        <div class="grid grid--4">
+          <button class="quick-action" onclick="location.hash='search'">
+            <span class="quick-action__icon">🔍</span>
+            <span class="quick-action__label">Find Leads</span>
+            <span class="quick-action__sub">Search Apollo.io for verified contacts</span>
+          </button>
+          <button class="quick-action" onclick="location.hash='outbox'">
+            <span class="quick-action__icon">▶</span>
+            <span class="quick-action__label">Send Emails</span>
+            <span class="quick-action__sub">Launch or manage your active campaign</span>
+          </button>
+          <button class="quick-action" onclick="location.hash='inboxes'">
+            <span class="quick-action__icon">📬</span>
+            <span class="quick-action__label">Manage Inboxes</span>
+            <span class="quick-action__sub">Add or test sender accounts</span>
+          </button>
+          <button class="quick-action" onclick="location.hash='records'">
+            <span class="quick-action__icon">📊</span>
+            <span class="quick-action__label">Export Data</span>
+            <span class="quick-action__sub">Download leads, campaigns &amp; replies as CSV</span>
+          </button>
         </div>
       </div>
     </div>

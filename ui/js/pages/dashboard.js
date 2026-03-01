@@ -50,15 +50,21 @@ export async function loadStats() {
     _setBadge('inboxes-count-badge', h.active_accounts);
 
     // ── Progress bar ─────────────────────────────────────────
-    const sent   = s.sent        ?? 0;
-    const total  = s.total_leads ?? 0;
-    const failed = s.failed      ?? 0;
-    const pending = s.pending    ?? (total - sent - failed);
-    const pct = total > 0 ? Math.round((sent / total) * 100) : 0;
+    const sent    = s.sent        ?? 0;
+    const total   = s.total_leads ?? 0;
+    const failed  = s.failed      ?? 0;
+    const pending = s.pending     ?? Math.max(0, total - sent - failed);
+    const pct     = total > 0 ? Math.round((sent / total) * 100) : 0;
 
     const fillEl = document.getElementById('d-progress-fill');
     if (fillEl) fillEl.style.width = `${pct}%`;
     setText('d-progress-label', `${sent} / ${total} emails delivered`);
+    setText('d-progress-pct',   `${pct}%`);
+
+    // Breakdown pills
+    setText('d-br-sent',    `✓ ${sent} sent`);
+    setText('d-br-pending', `⏳ ${pending} pending`);
+    setText('d-br-failed',  `✕ ${failed} failed`);
 
     const pendBadge = document.getElementById('d-pending-badge');
     if (pendBadge && pending > 0) {
@@ -67,6 +73,14 @@ export async function loadStats() {
     } else if (pendBadge) {
       pendBadge.style.display = 'none';
     }
+
+    // ── Stat card sub-text ────────────────────────────────────
+    const replied   = s.replied ?? 0;
+    const replyRate = sent > 0 ? Math.round((replied / sent) * 100) : 0;
+    setText('s-leads-sub',   pending > 0 ? `${pending} pending outreach` : 'in database');
+    setText('s-sent-sub',    failed  > 0 ? `${failed} failed` : 'all delivered');
+    setText('s-replies-sub', sent    > 0 ? `${replyRate}% reply rate` : 'no sends yet');
+    setText('s-inboxes-sub', 'sending accounts');
 
     // ── System health panel ──────────────────────────────────
     _setHealthBadge('d-server-badge', 'Online', 'sent');
