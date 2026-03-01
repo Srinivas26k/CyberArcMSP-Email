@@ -180,11 +180,11 @@ def wrap_email_template(
       <span class="brand-name">{company_name}</span>
     </div>
 
-    <!-- BODY (AI-generated) + hardcoded sign-off -->
+    <!-- BODY (AI-generated) + dynamic sign-off -->
     <div class="email-body">
       {inner_html}
-      <p style="margin:20px 0 2px 0;"><strong>Client Engagement Team</strong><br>
-      <span style="font-size:13px;color:#666;">{company_name}</span></p>
+      <p style="margin:20px 0 2px 0;"><strong>{sender_name}</strong><br>
+      <span style="font-size:13px;color:#666;">{sender_title} | {company_name}</span></p>
     </div>
 
     <!-- CTA -->
