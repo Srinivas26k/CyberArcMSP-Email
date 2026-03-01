@@ -250,6 +250,7 @@
               <input type="number" id="search-limit-input" min="1" max="500" value="50" placeholder="e.g. 50" />
             </label>
             <button class="btn btn--full" id="apollo-search-btn" style="margin-top:8px;">🔍 Search Apollo</button>
+            <div id="credits-used-banner" style="display:none;margin-top:10px;" class="info-box info-box--blue"></div>
           </div>
         </div>
         <div class="panel">
@@ -502,13 +503,40 @@
     <button class="btn btn--ghost btn--sm" onclick="window.closeLeadDrawer?.()">✕</button>
   </div>
   <div class="lead-drawer__body">
+
+    <!-- Status + quick links -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:18px;flex-wrap:wrap;">
+      <span id="drawer-status" class="status-badge"></span>
+      <a id="drawer-linkedin-btn" href="#" target="_blank" rel="noopener" class="btn btn--ghost btn--sm" style="display:none;">🔗 LinkedIn</a>
+      <a id="drawer-twitter-btn" href="#" target="_blank" rel="noopener" class="btn btn--ghost btn--sm" style="display:none;">𝕏 Twitter</a>
+      <a id="drawer-website-btn" href="#" target="_blank" rel="noopener" class="btn btn--ghost btn--sm" style="display:none;">🌐 Website</a>
+    </div>
+
+    <!-- Person -->
+    <p class="drawer-section-title">👤 Contact</p>
     <div class="drawer-row"><span class="drawer-label">Email</span><a id="drawer-email" href="#" class="drawer-value"></a></div>
-    <div class="drawer-row"><span class="drawer-label">LinkedIn</span><a id="drawer-linkedin" href="#" target="_blank" rel="noopener" class="drawer-value"></a></div>
+    <div class="drawer-row" id="dr-phone-row"><span class="drawer-label">Phone</span><span id="drawer-phone" class="drawer-value"></span></div>
     <div class="drawer-row"><span class="drawer-label">Location</span><span id="drawer-location" class="drawer-value"></span></div>
-    <div class="drawer-row"><span class="drawer-label">Company</span><span id="drawer-company" class="drawer-value"></span></div>
-    <div class="drawer-row"><span class="drawer-label">Headline</span><span id="drawer-headline" class="drawer-value"></span></div>
-    <div class="drawer-row"><span class="drawer-label">Status</span><span id="drawer-status" class="status-badge"></span></div>
-    <div style="margin-top:16px;"><p class="drawer-label">AI Summary</p><p id="drawer-summary" style="font-size:13px;color:var(--text-2);line-height:1.6;"></p></div>
+    <div class="drawer-row" id="dr-seniority-row"><span class="drawer-label">Seniority</span><span id="drawer-seniority" class="drawer-value"></span></div>
+    <div class="drawer-row" id="dr-dept-row"><span class="drawer-label">Department</span><span id="drawer-departments" class="drawer-value"></span></div>
+    <div class="drawer-row" id="dr-headline-row"><span class="drawer-label">Headline</span><span id="drawer-headline" class="drawer-value"></span></div>
+
+    <!-- Company -->
+    <p class="drawer-section-title" style="margin-top:18px;">🏢 Company</p>
+    <div class="drawer-row"><span class="drawer-label">Name</span><span id="drawer-company" class="drawer-value"></span></div>
+    <div class="drawer-row"><span class="drawer-label">Industry</span><span id="drawer-org-industry" class="drawer-value"></span></div>
+    <div class="drawer-row" id="dr-employees-row"><span class="drawer-label">Employees</span><span id="drawer-employees" class="drawer-value"></span></div>
+    <div class="drawer-row" id="dr-founded-row"><span class="drawer-label">Founded</span><span id="drawer-org-founded" class="drawer-value"></span></div>
+    <div class="drawer-row" id="dr-funding-row"><span class="drawer-label">Funding</span><span id="drawer-org-funding" class="drawer-value"></span></div>
+    <div id="dr-desc-row" style="margin-top:10px;display:none;">
+      <p class="drawer-label">About</p>
+      <p id="drawer-org-description" style="font-size:12.5px;color:var(--text-2);line-height:1.6;margin-top:4px;"></p>
+    </div>
+    <div id="dr-tech-row" style="margin-top:10px;display:none;">
+      <p class="drawer-label">Tech Stack</p>
+      <div id="drawer-org-tech" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;"></div>
+    </div>
+
   </div>
   <div class="lead-drawer__footer">
     <button class="btn btn--full" id="drawer-add-btn">+ Add to Leads</button>

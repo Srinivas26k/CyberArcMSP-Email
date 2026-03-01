@@ -47,5 +47,34 @@ def init_db():
     
     # Pre-heat the Vault engine so key generation occurs safely on boot
     VaultManager._initialize()
-    
+
     SQLModel.metadata.create_all(engine)
+    _migrate_db()
+
+
+def _migrate_db():
+    """
+    Non-destructive schema migration — adds any new columns that don't yet
+    exist in the SQLite database.  Safe to run on every startup.
+    """
+    import sqlite3
+
+    new_columns = [
+        ("headline",        "TEXT NOT NULL DEFAULT ''"),
+        ("twitter",         "TEXT NOT NULL DEFAULT ''"),
+        ("phone",           "TEXT NOT NULL DEFAULT ''"),
+        ("departments",     "TEXT NOT NULL DEFAULT ''"),
+        ("org_industry",    "TEXT NOT NULL DEFAULT ''"),
+        ("org_founded",     "TEXT NOT NULL DEFAULT ''"),
+        ("org_description", "TEXT NOT NULL DEFAULT ''"),
+        ("org_funding",     "TEXT NOT NULL DEFAULT ''"),
+        ("org_tech_stack",  "TEXT NOT NULL DEFAULT ''"),
+    ]
+
+    with sqlite3.connect(_DB_PATH) as con:
+        cur = con.execute("PRAGMA table_info(lead)")
+        existing = {row[1] for row in cur.fetchall()}
+        for col_name, col_def in new_columns:
+            if col_name not in existing:
+                con.execute(f"ALTER TABLE lead ADD COLUMN {col_name} {col_def}")
+        con.commit()
