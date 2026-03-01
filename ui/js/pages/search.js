@@ -54,7 +54,13 @@ function renderTags(type) {
   });
 }
 
+// Guard against double-submission (set synchronously before any await)
+let _searching = false;
+
 async function runSearch() {
+  if (_searching) return;
+  _searching = true;
+
   const btn       = document.getElementById('apollo-search-btn');
   const resultsEl = document.getElementById('search-results-body');
   const industry  = document.getElementById('keywords-input')?.value.trim() || '';
@@ -65,7 +71,7 @@ async function runSearch() {
     ? ['101,250', '251,500', '501,1000', '1001,5000', '5001,1000000']
     : [sizeVal];
 
-  if (!tags.titles.length) { toast('Add at least one job title', 'warning'); return; }
+  if (!tags.titles.length) { _searching = false; toast('Add at least one job title', 'warning'); return; }
 
   btn.innerHTML = '<span class="spinner"></span> Searching…';
   btn.disabled  = true;
@@ -112,6 +118,7 @@ async function runSearch() {
         </div>
       </div>`;
   } finally {
+    _searching = false;
     btn.innerHTML = '🔍 Search Apollo';
     btn.disabled  = false;
   }
