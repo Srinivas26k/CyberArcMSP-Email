@@ -3,10 +3,11 @@ import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core import db
 from app.api.v1.api import api_router
@@ -48,6 +49,21 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down…")
 
 app = FastAPI(title="CA MSP AI Outreach", version="2.1.1", lifespan=lifespan)
+
+# ── No-cache middleware for static assets ─────────────────────────────────────
+# Prevents Electron/Chromium from caching JS/CSS/HTML between app launches.
+# Without this, a previously cached broken JS file (e.g. with a SyntaxError)
+# can persist across restarts and silently break page functionality.
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.endswith(('.js', '.css', '.html')) or path in ('/', ''):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
+app.add_middleware(NoCacheStaticMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

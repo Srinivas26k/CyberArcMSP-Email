@@ -265,7 +265,16 @@ function createWindow() {
 
   // Always load from the local FastAPI server — it serves ui/ as static files
   // in both dev mode and packaged production builds.
-  mainWindow.loadURL(getServerUrl());
+  //
+  // In development, clear the HTTP cache first so that any previously-cached
+  // broken JS (e.g. a file that had a SyntaxError) is never served again.
+  if (!app.isPackaged) {
+    mainWindow.webContents.session.clearCache().then(() => {
+      mainWindow.loadURL(getServerUrl());
+    });
+  } else {
+    mainWindow.loadURL(getServerUrl());
+  }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();

@@ -28,12 +28,23 @@ let _slots = [];
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function init(register) {
-  document.getElementById('save-settings-btn')?.addEventListener('click',   saveSettings);
-  document.getElementById('add-llm-slot-btn')?.addEventListener('click',    addSlot);
-  document.getElementById('add-account-btn')?.addEventListener('click',     addAccount);
-  document.getElementById('acc-provider')?.addEventListener('change',       (e) => updateProviderHint(e.target.value));
-  document.getElementById('acc-email')?.addEventListener('input',           (e) => autoDetect(e.target.value));
-  document.getElementById('detect-provider-btn')?.addEventListener('click', detectProvider);
+  // ── Event delegation on the page container ────────────────────────────────
+  // Using delegation (rather than getElementById at boot-time) means the
+  // listener is always active regardless of caching or module-load timing.
+  document.getElementById('page-settings')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    switch (btn.id) {
+      case 'save-settings-btn':   saveSettings();  break;
+      case 'add-llm-slot-btn':    addSlot();       break;
+      case 'add-account-btn':     addAccount();    break;
+      case 'detect-provider-btn': detectProvider(); break;
+    }
+  });
+
+  // ── Input/change listeners (don't bubble in a useful way via delegation) ──
+  document.getElementById('acc-provider')?.addEventListener('change', (e) => updateProviderHint(e.target.value));
+  document.getElementById('acc-email')?.addEventListener('input',     (e) => autoDetect(e.target.value));
 
   register('settings', {
     onEnter: loadSettings,
