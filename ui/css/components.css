@@ -229,6 +229,10 @@ td {
 tr:last-child td { border-bottom: none; }
 tr:hover td      { background: rgba(0,0,0,.018); }
 
+/* Selected row highlight (checkbox selection) */
+tr.row--selected td { background: rgba(99,102,241,.08); }
+tr.row--selected:hover td { background: rgba(99,102,241,.13); }
+
 .td--muted { color: var(--muted); }
 .td--mono  { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); }
 .td--sm    { font-size: 11.5px; color: var(--muted); }

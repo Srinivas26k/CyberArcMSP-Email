@@ -1,21 +1,36 @@
 /**
- * pages/leads.js — All Leads: table, CSV upload/export, delete
+ * pages/leads.js — All Leads: per-row selection, delete selected, CSV upload
  */
 import { leadsAPI } from '../api.js';
-import { esc, formatDate } from '../utils.js';
+import { esc } from '../utils.js';
 import { toast } from '../toast.js';
 
+// Tracks selected lead IDs across renders
+const _selected = new Set();
+
 export function init(register) {
-  document.getElementById('clear-leads-btn')?.addEventListener('click',   clearAllLeads);
   document.getElementById('csv-upload-input')?.addEventListener('change', (e) => uploadCSV(e.target));
+  document.getElementById('delete-selected-btn')?.addEventListener('click', deleteSelected);
 
   register('leads', {
     onEnter: loadLeads,
-    onLeave: () => {},
+    onLeave: () => { _selected.clear(); _updateSelectionUI(); },
   });
 }
 
-async function loadLeads() {
+/** Show/hide the selection toolbar based on _selected size */
+function _updateSelectionUI() {
+  const count  = _selected.size;
+  const label  = document.getElementById('leads-sel-label');
+  const delBtn = document.getElementById('delete-selected-btn');
+  if (label)  { label.textContent  = count ? `${count} lead${count !== 1 ? 's' : ''} selected` : ''; label.style.display  = count ? '' : 'none'; }
+  if (delBtn) { delBtn.style.display = count ? '' : 'none'; }
+}
+
+export async function loadLeads() {
+  _selected.clear();
+  _updateSelectionUI();
+
   const wrap = document.getElementById('leads-table-body');
   if (!wrap) return;
   wrap.innerHTML = `
@@ -37,38 +52,91 @@ async function loadLeads() {
       return;
     }
 
-    wrap.innerHTML = `
-      <div class="table-wrap">
-        <table>
-          <thead><tr>
-            <th>Email</th><th>Name</th><th>Company</th><th>Role</th><th>Location</th><th>Status</th>
-          </tr></thead>
-          <tbody>
-            ${leads.map((l) => `
-              <tr>
-                <td>${esc(l.email)}</td>
-                <td style="font-weight:500;">${esc(((l.first_name || '') + ' ' + (l.last_name || '')).trim()) || '—'}</td>
-                <td>${esc(l.company || '—')}</td>
-                <td class="td--muted">${esc(l.role || '—')}</td>
-                <td class="td--muted">${esc(l.location || '—')}</td>
-                <td><span class="status-badge ${esc(l.status)}">${esc(l.status)}</span></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`;
+    _renderTable(leads);
   } catch (e) {
     wrap.innerHTML = `<div style="color:var(--danger);padding:24px;text-align:center;">Failed to load leads: ${esc(e.message)}</div>`;
     toast(e.message, 'error');
   }
 }
 
-async function clearAllLeads() {
-  if (!confirm('Delete ALL leads? This cannot be undone.')) return;
+function _renderTable(leads) {
+  const wrap = document.getElementById('leads-table-body');
+  if (!wrap) return;
+
+  wrap.innerHTML = `
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:36px;">
+            <input type="checkbox" id="leads-select-all" title="Select / deselect all" style="cursor:pointer;" />
+          </th>
+          <th>Email</th><th>Name</th><th>Company</th><th>Role</th><th>Location</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          ${leads.map((l) => `
+            <tr data-id="${l.id}" class="lead-row">
+              <td><input type="checkbox" class="lead-chk" data-id="${l.id}" style="cursor:pointer;" /></td>
+              <td>${esc(l.email)}</td>
+              <td style="font-weight:500;">${esc(((l.first_name || '') + ' ' + (l.last_name || '')).trim()) || '—'}</td>
+              <td>${esc(l.company || '—')}</td>
+              <td class="td--muted">${esc(l.role || '—')}</td>
+              <td class="td--muted">${esc(l.location || '—')}</td>
+              <td><span class="status-badge ${esc(l.status)}">${esc(l.status)}</span></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+
+  const selectAll = document.getElementById('leads-select-all');
+
+  // ── Select-all header checkbox ──────────────────────────────────────────────
+  selectAll?.addEventListener('change', () => {
+    wrap.querySelectorAll('.lead-chk').forEach((chk) => {
+      chk.checked = selectAll.checked;
+      const id = parseInt(chk.dataset.id);
+      selectAll.checked ? _selected.add(id) : _selected.delete(id);
+      chk.closest('tr')?.classList.toggle('row--selected', selectAll.checked);
+    });
+    _updateSelectionUI();
+  });
+
+  // ── Individual row checkboxes ───────────────────────────────────────────────
+  wrap.querySelectorAll('.lead-chk').forEach((chk) => {
+    chk.addEventListener('change', () => {
+      const id = parseInt(chk.dataset.id);
+      if (chk.checked) _selected.add(id); else _selected.delete(id);
+      chk.closest('tr')?.classList.toggle('row--selected', chk.checked);
+
+      // Sync select-all indeterminate / checked state
+      const all  = wrap.querySelectorAll('.lead-chk');
+      const chkd = wrap.querySelectorAll('.lead-chk:checked');
+      if (selectAll) {
+        selectAll.checked       = chkd.length > 0 && chkd.length === all.length;
+        selectAll.indeterminate = chkd.length > 0 && chkd.length < all.length;
+      }
+      _updateSelectionUI();
+    });
+  });
+}
+
+/** Delete only the manually selected leads */
+async function deleteSelected() {
+  if (!_selected.size) return;
+  const count = _selected.size;
+  if (!confirm(`Delete ${count} selected lead${count !== 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  const btn = document.getElementById('delete-selected-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Deleting…'; }
+
   try {
-    const r = await leadsAPI.clear();
-    toast(`Deleted ${r.deleted} leads`, 'info');
+    await Promise.all([..._selected].map((id) => leadsAPI.delete(id)));
+    _selected.clear();
+    toast(`Deleted ${count} lead${count !== 1 ? 's' : ''}`, 'info');
     loadLeads();
-  } catch (e) { toast(e.message, 'error'); }
+  } catch (e) {
+    toast('Delete failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '🗑 Delete Selected'; }
+  }
 }
 
 async function uploadCSV(input) {
