@@ -32,9 +32,11 @@ async function loadDbInfo() {
   try {
     const info = await databaseAPI.info();
     setText('db-path', info.db_path ?? '—');
-    setText('db-size', info.size_mb != null ? info.size_mb.toFixed(2) + ' MB' : '—');
-  } catch {
-    setText('db-path', 'Unavailable');
+    // size_mb is returned as a pre-formatted string (e.g. "0.05") by the API
+    const sizeMb = info.size_mb != null ? parseFloat(info.size_mb) : null;
+    setText('db-size', sizeMb != null && !isNaN(sizeMb) ? sizeMb.toFixed(2) + ' MB' : '—');
+  } catch (err) {
+    setText('db-path', 'Error: ' + err.message);
     setText('db-size', '—');
   }
 }
