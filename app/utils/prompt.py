@@ -19,7 +19,6 @@ Email structure (matches the reference J&J / Healthcare templates):
 
 Output contract: JSON only — {"subject": "...", "bodyHtml": "..."}
 """
-from datetime import datetime
 from typing import List
 from app.models.identity import IdentityProfile, KnowledgeBase
 
@@ -30,8 +29,6 @@ def build_email_prompt(
     services: List[KnowledgeBase],
 ) -> tuple[str, str]:
     """Returns (system_prompt, user_prompt) built entirely from DB data + lead."""
-
-    year = datetime.now().year
 
     # ── Lead data ─────────────────────────────────────────────────────────────
     first     = (lead.get("first_name") or "").strip()
@@ -62,7 +59,6 @@ def build_email_prompt(
     sender_org      = (identity.name         or "").strip()
     sender_tagline  = (identity.tagline      or "").strip()
     sender_website  = (identity.website      or "").strip()
-    sender_calendly = (identity.calendly_url or "").strip()
     # Individual sender name; falls back to company name so intro is never blank
     sender_name     = (identity.sender_name  or "").strip() or sender_org
 

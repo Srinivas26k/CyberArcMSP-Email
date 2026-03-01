@@ -444,6 +444,51 @@
           <div id="pillars-container" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
       </div>
+
+      <!-- EMAIL TEMPLATE EDITOR -->
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel__header">
+          <span>Email Template</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <label class="btn btn--ghost btn--sm" style="cursor:pointer;margin:0;">
+              📁 Upload .html
+              <input type="file" id="tpl-upload" accept=".html,.htm" style="display:none;">
+            </label>
+            <button class="btn btn--ghost btn--sm" id="tpl-preview-btn">👁 Preview</button>
+            <button class="btn btn--ghost btn--sm" id="tpl-reset-btn" style="color:var(--danger);">↺ Reset to Default</button>
+          </div>
+        </div>
+        <div class="panel__body">
+          <div class="info-box" style="margin-bottom:12px;">
+            Paste a <strong>custom HTML template</strong> to replace the built-in branded layout for <em>every</em> email you send.
+            Leave blank to keep the default. Template must include <code>{{BODY}}</code>.
+          </div>
+          <div style="background:var(--surface-2);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:var(--muted);line-height:2.2;">
+            <strong>Available tokens:</strong>&nbsp;
+            <code>{{BODY}}</code>&nbsp;
+            <code>{{CTA_BUTTON}}</code>&nbsp;
+            <code>{{SENDER_NAME}}</code>&nbsp;
+            <code>{{SENDER_TITLE}}</code>&nbsp;
+            <code>{{SENDER_EMAIL}}</code><br>
+            <code>{{COMPANY_NAME}}</code>&nbsp;
+            <code>{{COMPANY_TAGLINE}}</code>&nbsp;
+            <code>{{COMPANY_LOGO}}</code>&nbsp;
+            <code>{{COMPANY_WEBSITE}}</code>&nbsp;
+            <code>{{OFFICES}}</code>&nbsp;
+            <code>{{YEAR}}</code>
+          </div>
+          <textarea id="p-custom-tpl" rows="14"
+            style="font-family:'Fira Mono',ui-monospace,monospace;font-size:12px;line-height:1.6;resize:vertical;"
+            placeholder="Paste your full HTML here — or leave blank to use the default branded template."></textarea>
+          <div id="tpl-preview-wrap" style="display:none;margin-top:14px;border:1px solid var(--border);border-radius:6px;overflow:hidden;">
+            <div style="padding:8px 14px;background:var(--surface-2);font-size:11px;color:var(--muted);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <span>Preview — sample data injected</span>
+              <button class="btn btn--ghost btn--sm" id="tpl-preview-close">✕ Close</button>
+            </div>
+            <iframe id="tpl-preview-frame" style="width:100%;height:540px;border:none;background:#f0f2f5;"></iframe>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- RECORDS -->

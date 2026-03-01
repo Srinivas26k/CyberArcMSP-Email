@@ -12,7 +12,8 @@ class SettingsIn(BaseModel):
     sender_name:      Optional[str] = None
     sender_title:     Optional[str] = None
     sender_email:     Optional[str] = None
-    llm_provider:     Optional[str] = None
-    openrouter_model: Optional[str] = None
-    send_strategy:    Optional[str] = None
-    batch_size:       Optional[int] = None
+    llm_provider:          Optional[str] = None
+    openrouter_model:      Optional[str] = None
+    send_strategy:         Optional[str] = None
+    batch_size:            Optional[int] = None
+    custom_email_template: Optional[str] = None   # full HTML with {{PLACEHOLDER}} tokens

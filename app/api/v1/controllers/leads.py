@@ -226,7 +226,7 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     """Send the saved draft for one lead. Generates fresh if no draft is stored."""
     from app.utils.prompt import build_email_prompt
     from app.utils.llm_client import generate_email
-    from app.utils.company import wrap_email_template
+    from app.utils.company import wrap_email_template, render_custom_template
     from app.utils.email_engine import EmailEngine
     from app.repositories.account_repository import account_repository
     from app.models.campaign import Campaign
@@ -262,10 +262,10 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         raise HTTPException(400, "No active email accounts configured")
     acc = accs[0]
 
-    # Wrap in branded template
+    # Wrap in branded template (custom or default)
     identity, _ = _get_identity_and_services(session)
-    html_body = wrap_email_template(
-        body_html_raw,
+    _tpl_ctx = dict(
+        inner_html=body_html_raw,
         sender_email=acc.email,
         sender_name=acc.display_name or acc.email.split("@")[0].title(),
         sender_title=getattr(identity, "sender_title", "") or cfg.get("sender_title", "Executive"),
@@ -276,6 +276,8 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         company_website=getattr(identity, "website", ""),
         offices=_offices_to_str(getattr(identity, "offices", [])),
     )
+    custom_tpl = (cfg.get("custom_email_template") or "").strip()
+    html_body = render_custom_template(custom_tpl, **_tpl_ctx) if custom_tpl else wrap_email_template(**_tpl_ctx)
     plain = re.sub(r"<[^>]+>", " ", body_html_raw).strip()
 
     engine = EmailEngine(
