@@ -81,31 +81,22 @@ class CampaignService:
                     with Session(engine) as session:
                         lead = session.get(Lead, lead_id)
                         lead_data = CampaignService._lead_to_dict(lead)
-                        
-                        # Load dynamic Identity
+
+                        # Load dynamic Identity from DB (set during onboarding)
                         identity = session.exec(select(IdentityProfile)).first()
                         if not identity:
-                            import os
-                            from app.utils.company import COMPANY_PROFILE, SENDER_DEFAULTS, SERVICE_PORTFOLIO
-                            
+                            # Onboarding not completed — use empty identity, LLM uses generic language
                             identity = IdentityProfile(
-                                name=os.getenv("SENDER_NAME", COMPANY_PROFILE.get("name", "CyberArc MSP")),
-                                tagline=COMPANY_PROFILE.get("tagline", "Security Solutions"),
-                                website=COMPANY_PROFILE.get("website", ""),
-                                logo_url=COMPANY_PROFILE.get("logo_url", ""),
-                                calendly_url=COMPANY_PROFILE.get("calendly", ""),
-                                sender_title=os.getenv("SENDER_TITLE", SENDER_DEFAULTS.get("title", "Solutions Architect")),
-                                sender_name=os.getenv("SENDER_NAME", SENDER_DEFAULTS.get("name", "CyberArc MSP"))
+                                name="", tagline="", website="", logo_url="",
+                                calendly_url="", sender_title="", sender_name=""
                             )
-                            # Provide fallback services from company.py
-                            services = [
-                                KnowledgeBase(title="Cybersecurity", value_prop=SERVICE_PORTFOLIO.get("cybersecurity", "")),
-                                KnowledgeBase(title="Cloud & DevSecOps", value_prop=SERVICE_PORTFOLIO.get("cloud_devsecops", "")),
-                                KnowledgeBase(title="AI & Automation", value_prop=SERVICE_PORTFOLIO.get("ai_toolkit", ""))
-                            ]
+                            services = []
                         else:
-                            # Load Contextual Services (later we will use SrvDB semantic search here, for now grab top 3)
-                            services = session.exec(select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(3)).all()
+                            services = session.exec(
+                                select(KnowledgeBase)
+                                .where(KnowledgeBase.identity_id == identity.id)
+                                .limit(6)
+                            ).all()
 
                     # Dynamic prompt generation
                     sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services)
@@ -116,10 +107,7 @@ class CampaignService:
                     for attempt in range(2):
                         pkg = await generate_email(
                             sys_p, usr_p,
-                            groq_key=cfg.get("groq_key", ""),
-                            openrouter_key=cfg.get("openrouter_key", ""),
-                            preferred_provider=cfg.get("llm_provider", "groq"),
-                            openrouter_model=cfg.get("openrouter_model") or None,
+                            providers=cfg.get("providers", []),
                         )
                         
                         temp_plain = CampaignService._html_to_plain(pkg["bodyHtml"])

@@ -44,12 +44,30 @@ def _lead_to_dict(lead: Lead) -> dict:
 
 def _load_cfg(session: Session) -> dict:
     """Load LLM + campaign config from the settings table."""
+    import json
     from app.models.setting import Setting
-    SENSITIVE = {"groq_key", "openrouter_key", "apollo_key"}
+    SENSITIVE = {"groq_key", "openrouter_key", "apollo_key", "llm_providers"}
     rows = session.exec(select(Setting)).all()
     cfg: dict = {}
     for row in rows:
         cfg[row.key] = row.get_decrypted_value() if row.key in SENSITIVE else row.value
+
+    # Parse llm_providers JSON → list of {provider, api_key, model} dicts
+    raw = cfg.pop("llm_providers", "") or ""
+    if raw:
+        try:
+            cfg["providers"] = json.loads(raw)
+        except Exception:
+            cfg["providers"] = []
+    else:
+        # Backward compat: build providers list from legacy individual keys
+        legacy: list[dict] = []
+        if cfg.get("groq_key"):
+            legacy.append({"provider": "groq", "api_key": cfg["groq_key"], "model": ""})
+        if cfg.get("openrouter_key"):
+            legacy.append({"provider": "openrouter", "api_key": cfg["openrouter_key"],
+                           "model": cfg.get("openrouter_model", "")})
+        cfg["providers"] = legacy
     return cfg
 
 
@@ -153,21 +171,16 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
     identity, services = _get_identity_and_services(session)
     cfg = _load_cfg(session)
 
-    # Pre-flight: at least one LLM key must be set
-    if not cfg.get("groq_key") and not cfg.get("openrouter_key"):
-        raise HTTPException(400, "No LLM API key configured. Go to Settings and add your Groq or OpenRouter key.")
+    # Pre-flight: at least one provider slot has an api_key
+    providers = cfg.get("providers", [])
+    if not any(p.get("api_key", "").strip() for p in providers):
+        raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
 
     lead_data = _lead_to_dict(lead)
     sys_p, usr_p = build_email_prompt(lead_data, identity, services)
 
     try:
-        pkg = await generate_email(
-            sys_p, usr_p,
-            groq_key=cfg.get("groq_key", ""),
-            openrouter_key=cfg.get("openrouter_key", ""),
-            preferred_provider=cfg.get("llm_provider", "groq"),
-            openrouter_model=cfg.get("openrouter_model") or None,
-        )
+        pkg = await generate_email(sys_p, usr_p, providers=providers)
     except RuntimeError as exc:
         raise HTTPException(400, str(exc))
 
@@ -216,19 +229,14 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         subject      = lead.draft_subject
         body_html_raw = lead.draft_body
     else:
-        if not cfg.get("groq_key") and not cfg.get("openrouter_key"):
-            raise HTTPException(400, "No LLM API key configured. Go to Settings and add your Groq or OpenRouter key.")
+        providers = cfg.get("providers", [])
+        if not any(p.get("api_key", "").strip() for p in providers):
+            raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
         identity, services = _get_identity_and_services(session)
         lead_data = _lead_to_dict(lead)
         sys_p, usr_p = build_email_prompt(lead_data, identity, services)
         try:
-            pkg = await generate_email(
-                sys_p, usr_p,
-                groq_key=cfg.get("groq_key", ""),
-                openrouter_key=cfg.get("openrouter_key", ""),
-                preferred_provider=cfg.get("llm_provider", "groq"),
-                openrouter_model=cfg.get("openrouter_model") or None,
-            )
+            pkg = await generate_email(sys_p, usr_p, providers=providers)
         except RuntimeError as exc:
             raise HTTPException(400, str(exc))
         subject       = pkg["subject"]

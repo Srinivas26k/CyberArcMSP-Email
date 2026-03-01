@@ -85,8 +85,9 @@ export const accountsAPI = {
 };
 
 export const settingsAPI = {
-  get:    ()     => get('/api/settings/'),
-  update: (data) => post('/api/settings/', data),
+  get:     ()     => get('/api/settings/'),
+  update:  (data) => post('/api/settings/', data),
+  testLLM: (data) => post('/api/settings/test-llm', data),
 };
 
 export const setupAPI = {
