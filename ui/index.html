@@ -236,12 +236,18 @@
               </div>
             </label>
             <label>Keywords (optional)<input type="text" id="keywords-input" placeholder="e.g. SaaS, B2B, Series A" /></label>
-            <label>Results per search
-              <select id="search-limit-select">
-                <option value="25">25</option>
-                <option value="50" selected>50</option>
-                <option value="100">100</option>
+            <label>Company Size
+              <select id="company-size-select">
+                <option value="all">100+ employees (all sizes)</option>
+                <option value="101,250">100 – 250</option>
+                <option value="251,500">251 – 500</option>
+                <option value="501,1000">501 – 1,000</option>
+                <option value="1001,5000">1,000 – 5,000</option>
+                <option value="5001,1000000">5,000+</option>
               </select>
+            </label>
+            <label>Number of leads to find
+              <input type="number" id="search-limit-input" min="1" max="500" value="50" placeholder="e.g. 50" />
             </label>
             <button class="btn btn--full" id="apollo-search-btn" style="margin-top:8px;">🔍 Search Apollo</button>
           </div>
