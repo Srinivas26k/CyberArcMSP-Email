@@ -100,13 +100,15 @@ async def apollo_search(
 
     async with httpx.AsyncClient(timeout=35) as client:
         while len(collected) < target_count and page <= 20:
-            needed   = target_count - len(collected)
-            per_page = min(needed + 3, ENRICH_BATCH_SIZE)   # small buffer like Code.gs
+            needed = target_count - len(collected)
+            # Search is FREE — fetch a generous pool so we can filter smartly.
+            # Apollo's has_email flag tells us who has an email without spending credits.
+            search_per_page = min(max(needed * 8, 25), 100)
 
             # ── STEP 1: Search (FREE) ─────────────────────────────────────────
             search_payload: dict = {
                 "page":        page,
-                "per_page":    per_page,
+                "per_page":    search_per_page,
                 "person_titles": titles,
                 "person_seniorities": ["c_suite", "vp", "director", "manager", "owner", "founder"],
                 "organization_num_employees_ranges": employee_ranges,
@@ -143,7 +145,20 @@ async def apollo_search(
                 logger.info(f"Apollo returned 0 people on page {page} — stopping")
                 break
 
-            person_ids = [p["id"] for p in people if p.get("id")]
+            # Filter to people Apollo already knows have emails — FREE.
+            # has_email is a boolean in the Apollo response; fall back to all
+            # people if the field is absent (older API keys may omit it).
+            people_with_email = [p for p in people if p.get("id") and p.get("has_email") is not False]
+            if not people_with_email:
+                # has_email absent for all — use everyone but still cap tightly
+                people_with_email = [p for p in people if p.get("id")]
+            logger.info(f"Page {page}: {len(people)} results, {len(people_with_email)} candidates for enrichment")
+
+            # Enrich exactly what we still need — the outer while-loop retries
+            # if enrichment misses (no email returned).  This minimises credits:
+            # worst case = target_count + number_of_miss_retries.
+            to_enrich = people_with_email[:needed]
+            person_ids = [p["id"] for p in to_enrich]
             if not person_ids:
                 page += 1
                 continue
