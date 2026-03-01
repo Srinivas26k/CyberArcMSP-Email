@@ -31,3 +31,6 @@ class Lead(Base, table=True):
     # Lifecycle: pending -> drafting -> sent -> replied | failed
     status: str = Field(default="pending", index=True)
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    # AI-generated draft — editable before sending
+    draft_subject: str = Field(default="")
+    draft_body: str = Field(default="")

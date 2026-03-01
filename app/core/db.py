@@ -69,6 +69,8 @@ def _migrate_db():
         ("org_description", "TEXT NOT NULL DEFAULT ''"),
         ("org_funding",     "TEXT NOT NULL DEFAULT ''"),
         ("org_tech_stack",  "TEXT NOT NULL DEFAULT ''"),
+        ("draft_subject",   "TEXT NOT NULL DEFAULT ''"),
+        ("draft_body",      "TEXT NOT NULL DEFAULT ''"),
     ]
 
     with sqlite3.connect(_DB_PATH) as con:

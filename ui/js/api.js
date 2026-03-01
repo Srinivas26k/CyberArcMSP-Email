@@ -52,10 +52,11 @@ async function _upload(path, formData) {
 
 const get    = (path, opts)       => _request(path, { ...opts, method: 'GET'    });
 const post   = (path, body, opts) => _request(path, { ...opts, method: 'POST', body });
+const patch  = (path, body, opts) => _request(path, { ...opts, method: 'PATCH', body });
 const del    = (path, opts)       => _request(path, { ...opts, method: 'DELETE' });
 const upload = (path, fd)         => _upload(path, fd);
 
-// ── Typed API namespaces ──────────────────────────────────────────────────────
+// ── Typed API namespaces ──────────────────────────────────────────────
 
 export const healthAPI = {
   status: ()     => get('/api/health'),
@@ -63,12 +64,16 @@ export const healthAPI = {
 };
 
 export const leadsAPI = {
-  list:   ()     => get('/api/leads/'),
-  add:    (data) => post('/api/leads/', data),
-  csv:    (fd)   => upload('/api/leads/csv', fd),
-  delete: (id)   => del(`/api/leads/${id}`),
-  clear:  ()     => del('/api/leads/'),
-  apollo: (data) => post('/api/leads/apollo/search', data),
+  list:      ()           => get('/api/leads/'),
+  add:       (data)       => post('/api/leads/', data),
+  csv:       (fd)         => upload('/api/leads/csv', fd),
+  delete:    (id)         => del(`/api/leads/${id}`),
+  clear:     ()           => del('/api/leads/'),
+  apollo:    (data)       => post('/api/leads/apollo/search', data),
+  // Email draft
+  preview:   (id)         => post(`/api/leads/${id}/preview`),
+  saveDraft: (id, data)   => patch(`/api/leads/${id}/draft`, data),
+  sendOne:   (id)         => post(`/api/leads/${id}/send`),
 };
 
 export const accountsAPI = {
