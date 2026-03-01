@@ -91,7 +91,7 @@ def _get_identity_and_services(session: Session):
         services = []
     else:
         services = session.exec(
-            select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(6)
+            select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(10)
         ).all()
     return identity, services
 
