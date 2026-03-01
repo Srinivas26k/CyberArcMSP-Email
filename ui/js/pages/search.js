@@ -85,12 +85,20 @@ async function runSearch() {
       resultsEl.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🔍</div><p class="empty-state__text">No leads found. Try broader titles or fewer location filters.</p></div>`;
     } else {
       renderResults(leads);
-      const added   = res.added   ?? 0;
-      const skipped = res.skipped ?? 0;
-      const parts   = [];
+      const added    = res.added        ?? 0;
+      const skipped  = res.skipped      ?? 0;
+      const credits  = res.credits_used ?? leads.length;
+      const parts    = [];
       if (added   > 0) parts.push(`${added} new saved`);
       if (skipped > 0) parts.push(`${skipped} already in database`);
       toast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}${parts.length ? ' · ' + parts.join(', ') : ''}`, 'success');
+
+      // Credits banner
+      const banner = document.getElementById('credits-used-banner');
+      if (banner) {
+        banner.innerHTML = `⚡ <strong>${credits} Apollo credit${credits !== 1 ? 's' : ''} used</strong> this search &nbsp;·&nbsp; ${leads.length} lead${leads.length !== 1 ? 's' : ''} fetched, ${added} new saved, ${skipped} already in DB`;
+        banner.style.display = '';
+      }
     }
   } catch (e) {
     resultsEl.innerHTML = `
@@ -147,30 +155,59 @@ function openLeadDrawer(idx) {
   const name         = ((l.first_name || '') + ' ' + (l.last_name || '')).trim() || '—';
   const titleCompany = [l.role, l.company].filter(Boolean).join(' @ ') || '—';
 
-  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
-  const setLink = (id, text, href) => {
+  const setEl   = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val || '—'; };
+  const showRow = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val ? '' : 'none'; };
+  const setLink = (id, href) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.textContent = text || '—';
-    el.href = href || '#';
+    if (href) { el.href = href; el.style.display = ''; }
+    else       { el.style.display = 'none'; }
   };
 
-  setEl('drawer-name', name);
+  // Header
+  setEl('drawer-name',         name);
   setEl('drawer-title-company', titleCompany);
-  setLink('drawer-email', l.email, l.email ? `mailto:${l.email}` : '#');
-  const li = safeUrl(l.linkedin);
-  setLink('drawer-linkedin', li ? 'View Profile →' : '—', li || '#');
-  setEl('drawer-location', l.location);
-  setEl('drawer-company', l.company);
-  setEl('drawer-headline', l.role);
-  setEl('drawer-summary', l.industry || '');
 
+  // Status
   const statusEl = document.getElementById('drawer-status');
-  if (statusEl) {
-    statusEl.textContent = l.status || 'new';
-    statusEl.className   = `status-badge ${l.status || 'pending'}`;
-  }
+  if (statusEl) { statusEl.textContent = l.status || 'pending'; statusEl.className = `status-badge ${l.status || 'pending'}`; }
 
+  // Quick-link buttons
+  setLink('drawer-linkedin-btn', l.linkedin || '');
+  setLink('drawer-twitter-btn',  l.twitter  || '');
+  setLink('drawer-website-btn',  l.website  || '');
+
+  // Contact section
+  const emailEl = document.getElementById('drawer-email');
+  if (emailEl) { emailEl.textContent = l.email || '—'; emailEl.href = l.email ? `mailto:${l.email}` : '#'; }
+
+  setEl('drawer-phone',       l.phone);       showRow('dr-phone-row',    l.phone);
+  setEl('drawer-location',    l.location);
+  setEl('drawer-seniority',   l.seniority);   showRow('dr-seniority-row', l.seniority);
+  setEl('drawer-departments', l.departments); showRow('dr-dept-row',      l.departments);
+  setEl('drawer-headline',    l.headline);    showRow('dr-headline-row',  l.headline);
+
+  // Company section
+  setEl('drawer-company',      l.company);
+  setEl('drawer-org-industry', l.org_industry || l.industry);
+  setEl('drawer-employees',    l.employees);  showRow('dr-employees-row', l.employees);
+  setEl('drawer-org-founded',  l.org_founded); showRow('dr-founded-row',  l.org_founded);
+  setEl('drawer-org-funding',  l.org_funding); showRow('dr-funding-row',  l.org_funding);
+
+  const descRow = document.getElementById('dr-desc-row');
+  const descEl  = document.getElementById('drawer-org-description');
+  if (descEl && l.org_description) { descEl.textContent = l.org_description; if (descRow) descRow.style.display = ''; }
+  else if (descRow) descRow.style.display = 'none';
+
+  const techRow = document.getElementById('dr-tech-row');
+  const techEl  = document.getElementById('drawer-org-tech');
+  if (techEl && l.org_tech_stack) {
+    techEl.innerHTML = l.org_tech_stack.split(',').map(t => t.trim()).filter(Boolean)
+      .map(t => `<span class="breakdown-pill breakdown-pill--pending" style="font-size:10.5px;">${esc(t)}</span>`).join('');
+    if (techRow) techRow.style.display = '';
+  } else if (techRow) techRow.style.display = 'none';
+
+  // Add button
   const addBtn = document.getElementById('drawer-add-btn');
   if (addBtn) {
     addBtn.textContent = '+ Add to Leads';

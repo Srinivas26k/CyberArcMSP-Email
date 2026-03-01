@@ -67,7 +67,7 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(get_db_sessio
         raise HTTPException(400, "Apollo API key not configured. Set it in Settings.")
 
     try:
-        results = await _apollo_search(
+        results, credits_used = await _apollo_search(
             api_key=key,
             titles=q.titles,
             industry=q.industry,
@@ -78,4 +78,6 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(get_db_sessio
     except RuntimeError as exc:
         raise HTTPException(400, str(exc))
 
-    return lead_service.add_imported_leads(session, results)
+    resp = lead_service.add_imported_leads(session, results)
+    resp["credits_used"] = credits_used
+    return resp

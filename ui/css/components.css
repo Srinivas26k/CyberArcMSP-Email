@@ -572,7 +572,18 @@ tr:hover td      { background: rgba(0,0,0,.018); }
 .info-box--yellow { background: var(--warning-bg);   border: 1px solid var(--warning-border); color: var(--text-2); }
 .info-box--green  { background: var(--success-bg);   border: 1px solid var(--success-border); color: var(--text-2); }
 .info-box--red    { background: var(--danger-bg);    border: 1px solid var(--danger-border);  color: var(--text-2); }
+.info-box--blue   { background: rgba(99,102,241,.08); border: 1px solid rgba(99,102,241,.22); color: var(--text-2); }
 .info-box a       { color: var(--brand); text-decoration: underline; }
+
+/* ── DRAWER SECTION TITLE ─────────────────────────────────── */
+.drawer-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
 
 /* ── QUICK ACTION CARDS ───────────────────────────────────── */
 .quick-action {
