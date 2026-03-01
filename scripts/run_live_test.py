@@ -105,7 +105,8 @@ async def run_live_pipeline():
             await asyncio.sleep(3)
             r = await client.get("/api/leads/")
             leads = r.json().get("leads", [])
-            if not leads: continue
+            if not leads:
+                continue
             
             lead = list(filter(lambda x: x["email"] == TARGET_EMAIL, leads))[0]
             status = lead.get("status")
