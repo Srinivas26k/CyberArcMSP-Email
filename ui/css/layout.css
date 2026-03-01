@@ -34,7 +34,7 @@ a { color: inherit; text-decoration: none; }
 
 .sidebar__logo,
 .sidebar__brand {
-  padding: 16px 12px 14px;
+  padding: 20px 12px 14px;
   border-bottom: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -49,13 +49,26 @@ a { color: inherit; text-decoration: none; }
   flex-shrink: 0;
 }
 
+/* Logo container: adapts to whatever image or SVG is inside.
+   No fixed dimensions, no overflow:hidden that crops wide logos. */
 .brand-mark {
-  /* No CSS background — the inner SVG rect / img handles its own rendering */
-  width: 48px; height: 48px;
-  border-radius: 10px;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  overflow: hidden;
+  /* Constrain max size only */
+  max-width: 140px;
+  max-height: 72px;
+}
+
+/* The actual logo image — contain so the whole logo is always visible */
+.brand-mark img {
+  max-width: 140px;
+  max-height: 64px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-info { min-width: 0; }
