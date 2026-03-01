@@ -3,10 +3,11 @@ import logging
 import os
 import shutil
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core import db
 from app.api.v1.api import api_router
@@ -49,9 +50,28 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="CA MSP AI Outreach", version="2.1.1", lifespan=lifespan)
 
+# ── No-cache middleware for static assets ─────────────────────────────────────
+# Prevents Electron/Chromium from caching JS/CSS/HTML between app launches.
+# Without this, a previously cached broken JS file (e.g. with a SyntaxError)
+# can persist across restarts and silently break page functionality.
+class NoCacheStaticMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.endswith(('.js', '.css', '.html')) or path in ('/', ''):
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+            response.headers['Pragma'] = 'no-cache'
+        return response
+
+app.add_middleware(NoCacheStaticMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8002", "http://localhost:8002"],
+    allow_origins=[
+        "http://127.0.0.1:8008", "http://localhost:8008",
+        "http://127.0.0.1:8002", "http://localhost:8002",
+        "http://localhost:5173",  "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -91,9 +111,9 @@ _here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _UI_DIR = os.path.join(_here, "ui")
 
 if os.path.isdir(_UI_DIR):
-    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="ui")
+    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="frontend")
 else:
-    logger.warning("UI directory not found — frontend will not be served.")
+    logger.warning("ui/ directory not found — frontend will not be served.")
 
 if __name__ == "__main__":
     import uvicorn

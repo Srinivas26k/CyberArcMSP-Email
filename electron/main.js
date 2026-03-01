@@ -23,18 +23,18 @@ const { app, BrowserWindow, shell, Menu, MenuItem, dialog } = require('electron'
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
-const fs   = require('fs');
+const fs = require('fs');
 
-let SERVER_PORT = 8002;
+let SERVER_PORT = 8008;
 const getServerUrl = () => `http://127.0.0.1:${SERVER_PORT}`;
 
 // User-data directory — survives upgrades on all platforms
 const USER_DATA_DIR = app.getPath('userData');   // e.g. %APPDATA%\CyberArc Outreach
 
-let mainWindow    = null;
+let mainWindow = null;
 let serverProcess = null;
-let startupLogs   = [];
-let startupExit   = null;
+let startupLogs = [];
+let startupExit = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Resolve Python executable inside the bundled runtime.
@@ -56,28 +56,28 @@ function resolvePythonExe(projectDir) {
   // Candidate paths (in priority order) covering different packaging layouts
   const candidates = isWin
     ? [
-        // ── Preferred: bundled-python/ has python.exe + python312.dll together ──
-        // The .venv/Scripts/python.exe shim requires python312.dll from the uv
-        // cache dir (e.g. %APPDATA%\uv\python\...) which doesn't exist on the
-        // user's machine. bundled-python/ contains the full self-contained build.
-        path.join(projectDir, 'bundled-python', 'python.exe'),
-        // ── Fallback: .venv shim (works only in dev on the dev machine) ──────
-        path.join(projectDir, '.venv', 'Scripts', 'python.exe'),
-        path.join(projectDir, '.venv', 'Scripts', 'python3.exe'),
-        path.join(process.resourcesPath, 'app', 'bundled-python', 'python.exe'),
-      ]
+      // ── Preferred: bundled-python/ has python.exe + python312.dll together ──
+      // The .venv/Scripts/python.exe shim requires python312.dll from the uv
+      // cache dir (e.g. %APPDATA%\uv\python\...) which doesn't exist on the
+      // user's machine. bundled-python/ contains the full self-contained build.
+      path.join(projectDir, 'bundled-python', 'python.exe'),
+      // ── Fallback: .venv shim (works only in dev on the dev machine) ──────
+      path.join(projectDir, '.venv', 'Scripts', 'python.exe'),
+      path.join(projectDir, '.venv', 'Scripts', 'python3.exe'),
+      path.join(process.resourcesPath, 'app', 'bundled-python', 'python.exe'),
+    ]
     : [
-        // ── Preferred: fully self-contained standalone Python (no symlinks) ──
-        path.join(projectDir, 'bundled-python', 'bin', 'python3.12'),
-        path.join(projectDir, 'bundled-python', 'bin', 'python3'),
-        path.join(projectDir, 'bundled-python', 'bin', 'python'),
-        // ── Fallback: .venv (works in dev-mode; may be a broken symlink when
-        //    packaged — kept here so legacy AppImages still attempt it) ────────
-        path.join(projectDir, '.venv', 'bin', 'python3'),
-        path.join(projectDir, '.venv', 'bin', 'python'),
-        path.join(process.resourcesPath, '.venv', 'bin', 'python3'),
-        path.join(process.resourcesPath, '.venv', 'bin', 'python'),
-      ];
+      // ── Preferred: fully self-contained standalone Python (no symlinks) ──
+      path.join(projectDir, 'bundled-python', 'bin', 'python3.12'),
+      path.join(projectDir, 'bundled-python', 'bin', 'python3'),
+      path.join(projectDir, 'bundled-python', 'bin', 'python'),
+      // ── Fallback: .venv (works in dev-mode; may be a broken symlink when
+      //    packaged — kept here so legacy AppImages still attempt it) ────────
+      path.join(projectDir, '.venv', 'bin', 'python3'),
+      path.join(projectDir, '.venv', 'bin', 'python'),
+      path.join(process.resourcesPath, '.venv', 'bin', 'python3'),
+      path.join(process.resourcesPath, '.venv', 'bin', 'python'),
+    ];
 
   for (const p of candidates) {
     try {
@@ -129,7 +129,7 @@ function startServer() {
       app.quit();
       return;
     }
-    cmd  = pythonExe;
+    cmd = pythonExe;
     args = [
       '-m', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
@@ -142,7 +142,7 @@ function startServer() {
       const home = process.env.HOME || '';
       env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
     }
-    cmd  = process.platform === 'win32' ? 'uv.exe' : 'uv';
+    cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
     args = [
       'run', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
@@ -263,7 +263,18 @@ function createWindow() {
     backgroundColor: '#f8fafc',
   });
 
-  mainWindow.loadURL(getServerUrl());
+  // Always load from the local FastAPI server — it serves ui/ as static files
+  // in both dev mode and packaged production builds.
+  //
+  // In development, clear the HTTP cache first so that any previously-cached
+  // broken JS (e.g. a file that had a SyntaxError) is never served again.
+  if (!app.isPackaged) {
+    mainWindow.webContents.session.clearCache().then(() => {
+      mainWindow.loadURL(getServerUrl());
+    });
+  } else {
+    mainWindow.loadURL(getServerUrl());
+  }
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -304,9 +315,9 @@ function createWindow() {
       menu.append(new MenuItem({ type: 'separator' }));
     }
 
-    menu.append(new MenuItem({ label: 'Cut',        role: 'cut',       enabled: params.editFlags.canCut }));
-    menu.append(new MenuItem({ label: 'Copy',       role: 'copy',      enabled: params.editFlags.canCopy }));
-    menu.append(new MenuItem({ label: 'Paste',      role: 'paste',     enabled: params.editFlags.canPaste }));
+    menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));
+    menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy }));
+    menu.append(new MenuItem({ label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }));
     menu.append(new MenuItem({ type: 'separator' }));
     menu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: params.editFlags.canSelectAll }));
 
@@ -323,7 +334,7 @@ function createWindow() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
-  const preferredPorts = [8002, 8003, 8004];
+  const preferredPorts = [8008, 8009, 8010];
   let started = false;
   let lastErr = null;
 
@@ -338,7 +349,7 @@ app.whenReady().then(async () => {
     } catch (err) {
       lastErr = err;
       if (serverProcess) {
-        try { serverProcess.kill(); } catch (_) {}
+        try { serverProcess.kill(); } catch (_) { }
       }
     }
   }
