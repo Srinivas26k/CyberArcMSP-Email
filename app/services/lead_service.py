@@ -36,7 +36,13 @@ class LeadService:
             existing_emails.add(email)
             added += 1
 
-        return {"added": added, "skipped": skipped, "total": len(lead_repository.get_all(session))}
+        return {
+            "added":   added,
+            "skipped": skipped,
+            "found":   len(leads_data),
+            "total":   len(lead_repository.get_all(session)),
+            "leads":   leads_data,          # full objects for the results panel
+        }
 
     @staticmethod
     def process_csv_upload(session: Session, content: bytes) -> dict:
