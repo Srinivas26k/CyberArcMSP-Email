@@ -65,6 +65,13 @@ function _activate(rawId) {
 
 /** Initialise the router. Call once after all page modules have been registered. */
 export function initRouter() {
+  // Wire up sidebar nav buttons → hash navigation
+  document.querySelectorAll('.nav-item[data-page]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      location.hash = btn.dataset.page;
+    });
+  });
+
   window.addEventListener('hashchange', () => {
     const id = location.hash.replace('#', '') || 'dashboard';
     _activate(id);
