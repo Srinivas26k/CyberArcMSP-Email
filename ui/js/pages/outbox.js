@@ -82,6 +82,7 @@ async function loadOutbox() {
       });
     });
 
+    const tbody = document.getElementById('outbox-tbody');
     if (_sortable) _sortable.destroy();
     if (window.Sortable && tbody) {
       _sortable = Sortable.create(tbody, {
