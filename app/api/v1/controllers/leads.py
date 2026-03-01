@@ -60,12 +60,18 @@ def _load_cfg(session: Session) -> dict:
         except Exception:
             cfg["providers"] = []
     else:
-        # Backward compat: build providers list from legacy individual keys
+        # Backward compat: build providers list from legacy individual keys.
+        # Flag this so callers can give a better error message.
+        cfg["_legacy_keys"] = True
         legacy: list[dict] = []
-        if cfg.get("groq_key"):
-            legacy.append({"provider": "groq", "api_key": cfg["groq_key"], "model": ""})
-        if cfg.get("openrouter_key"):
-            legacy.append({"provider": "openrouter", "api_key": cfg["openrouter_key"],
+        groq_k = cfg.get("groq_key", "").strip()
+        or_k   = cfg.get("openrouter_key", "").strip()
+        if groq_k:
+            legacy.append({"provider": "groq", "api_key": groq_k, "model": ""})
+        # Only add openrouter slot if the key is different from the groq key
+        # (a common mis-save where the same key ends up in both fields).
+        if or_k and or_k != groq_k:
+            legacy.append({"provider": "openrouter", "api_key": or_k,
                            "model": cfg.get("openrouter_model", "")})
         cfg["providers"] = legacy
     return cfg
@@ -174,7 +180,14 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
     # Pre-flight: at least one provider slot has an api_key
     providers = cfg.get("providers", [])
     if not any(p.get("api_key", "").strip() for p in providers):
-        raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
+        raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers, add a provider and click Save Settings.")
+
+    # Warn when using legacy keys (llm_providers never saved via new UI)
+    if cfg.get("_legacy_keys"):
+        import logging as _log
+        _log.getLogger(__name__).warning(
+            "Craft: using legacy groq_key/openrouter_key — user should save providers via Settings UI"
+        )
 
     lead_data = _lead_to_dict(lead)
     sys_p, usr_p = build_email_prompt(lead_data, identity, services)

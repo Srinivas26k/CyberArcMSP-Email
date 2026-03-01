@@ -316,7 +316,28 @@ async function _eedGenerate(leadId) {
     toast('Email generated — review and edit before sending', 'success');
   } catch (e) {
     _eedSetLoading(false);
-    toast('Generation failed: ' + e.message, 'error');
+    const msg = e.message || 'Unknown error';
+    // If it's an LLM config problem, guide the user directly to Settings
+    const isConfigErr = /provider|api.?key|settings|save/i.test(msg);
+    toast(
+      'Generation failed: ' + msg + (isConfigErr ? ' ← click Settings to fix' : ''),
+      'error',
+      isConfigErr ? 8000 : 4000,
+    );
+    if (isConfigErr) {
+      // Leave drawer open but also show a non-dismissible banner inside it
+      const loadEl = document.getElementById('eed-loading');
+      if (loadEl) {
+        loadEl.style.display = '';
+        loadEl.innerHTML = `<div style="color:var(--danger,#ef4444);font-size:0.85rem;padding:20px;text-align:center;">
+          <p style="margin:0 0 12px;font-size:1.1rem;">⚠️ LLM provider error</p>
+          <p style="margin:0 0 12px;">${msg}</p>
+          <button class="btn btn--sm" onclick="location.hash='settings';document.getElementById('email-editor-overlay').click()">
+            → Go to Settings
+          </button>
+        </div>`;
+      }
+    }
   }
 }
 

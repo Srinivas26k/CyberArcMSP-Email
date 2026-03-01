@@ -271,6 +271,7 @@ async def generate_email(
         raise RuntimeError("No LLM API keys configured or all providers failed.")
 
     raw: Optional[str] = None
+    _failures: list[str] = []
     for slot in effective:
         pname   = (slot.get("provider") or "groq").lower()
         api_key = (slot.get("api_key")  or "").strip()
@@ -297,10 +298,15 @@ async def generate_email(
 
         if raw is not None:
             break
+        _failures.append(f"{pname}/{model}")
         logger.warning(f"Provider {pname} failed, trying next slot...")
 
     if raw is None:
-        raise RuntimeError("All configured LLM providers failed to generate a response.")
+        detail = ", ".join(_failures) if _failures else "no providers"
+        raise RuntimeError(
+            f"All LLM providers failed ({detail}). "
+            "Go to Settings → LLM Providers, verify your API keys and click Save Settings."
+        )
 
     result = _extract_json(raw)
 
