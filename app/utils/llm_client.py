@@ -98,7 +98,9 @@ _provider_sems: dict[str, asyncio.Semaphore] = {
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _extract_json(raw: str) -> dict:
-    """Strip markdown fences, find the outermost {...}, parse JSON."""
+    """Strip markdown fences, think-tags, find the outermost {...}, parse JSON."""
+    # Reasoning models (Qwen3, DeepSeek-R1) wrap thinking in <think>...</think>
+    raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
     raw = re.sub(r"```json|```", "", raw).strip()
     start = raw.find("{")
     end   = raw.rfind("}")

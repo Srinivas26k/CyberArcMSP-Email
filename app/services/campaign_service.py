@@ -135,10 +135,10 @@ class CampaignService:
                     org_logo = getattr(identity, 'logo_url', "")
                     org_web = getattr(identity, 'website', "")
                     offices_raw = getattr(identity, 'offices', [])
-                    # offices can be List[dict] (from DB) or str (legacy) — normalise to str
+                    # offices can be List[dict], List[str], or str (legacy) — normalise to str
                     if isinstance(offices_raw, list):
                         offices_str = " • ".join(
-                            o.get("city") or o.get("name") or str(o)
+                            (o.get("city") or o.get("name") or str(o)) if isinstance(o, dict) else str(o)
                             for o in offices_raw if o
                         ) if offices_raw else ""
                     else:

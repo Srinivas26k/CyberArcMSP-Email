@@ -96,11 +96,12 @@ def _get_identity_and_services(session: Session):
     return identity, services
 
 def _offices_to_str(offices) -> str:
-    """Convert IdentityProfile.offices (List[dict]) or str to a plain bullet string."""
+    """Convert IdentityProfile.offices (List[dict] | List[str] | str) to a plain bullet string."""
     if isinstance(offices, list):
-        return " \u2022 ".join(
-            o.get("city") or o.get("name") or str(o) for o in offices if o
-        )
+        return " • ".join(
+            (o.get("city") or o.get("name") or str(o)) if isinstance(o, dict) else str(o)
+            for o in offices if o
+        ) or ""
     return str(offices) if offices else ""
 
 
