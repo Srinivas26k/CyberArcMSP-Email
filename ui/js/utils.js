@@ -100,7 +100,7 @@ export function applyBranding(profile) {
       .slice(0, 2)
       .join('');
     if (profile.logo_url) {
-      markEl.innerHTML = `<img src="${esc(profile.logo_url)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none'">`;
+      markEl.innerHTML = `<img src="${esc(profile.logo_url)}" style="max-width:140px;max-height:64px;width:auto;height:auto;object-fit:contain;display:block;" onerror="this.style.display='none'">`;
     } else {
       markEl.textContent = initials || 'SR';
     }
