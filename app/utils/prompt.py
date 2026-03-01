@@ -13,7 +13,8 @@ Email structure (matches the reference J&J / Healthcare templates):
   5. Also-offers — "Beyond these, we also provide …" (extra service titles)
   6. Social proof — 1 sentence if KnowledgeBase entries mention verifiable stats
   7. CTA sentence — personal invitation for a 30-min call
-  8. Calendly button
+  8. Closing ("Looking forward to connecting." / "Warm regards,")
+  NOTE: The Calendly booking button is injected by wrap_email_template(), not here.
   9. "Looking forward to connecting." / "Warm regards,"   ← STOP
 
 Output contract: JSON only — {"subject": "...", "bodyHtml": "..."}
@@ -81,19 +82,6 @@ def build_email_prompt(
 
     extra_titles = [s.title.strip() for s in extra if s.title.strip()]
     also_offers  = ", ".join(extra_titles) if extra_titles else ""
-
-    # ── Calendly CTA button ───────────────────────────────────────────────────
-    if sender_calendly:
-        cta_html = (
-            '<p style="margin:20px 0;">'
-            '<a href="' + sender_calendly + '" '
-            'style="display:inline-block;background:#1A56DB;color:#ffffff;'
-            'padding:12px 28px;border-radius:6px;text-decoration:none;'
-            'font-weight:600;font-size:15px;letter-spacing:0.01em;">'
-            'Book a 30-min call &rarr;</a></p>'
-        )
-    else:
-        cta_html = "<p>Reply with a time that works for a quick 30-minute call.</p>"
 
     # Pre-compute strings that appear inside the f-string to avoid nested-quote
     # issues on Python < 3.12.
@@ -174,8 +162,9 @@ def build_email_prompt(
         "8. <p>PERSONAL CTA — 1 sentence: invite " + greeting + " to a 30-minute\n"
         "   conversation to understand " + company + "'s current situation and explore\n"
         "   how " + (sender_org or "we") + " can help.\n"
-        '   Use warm executive language: "I would welcome…" or "I\'d love to…"</p>\n'
-        + cta_html + "\n\n"
+        '   Use warm executive language: "I would welcome…" or "I\'d love to…"\n'
+        '   Write this as a plain <p> only — do NOT output any <a> button.\n'
+        '   A styled booking button is appended automatically by the mailer.\n\n'
         "9. <p>Looking forward to connecting.</p>\n"
         "   <p>Warm regards,</p>\n"
         "   STOP HERE. No name, title, email, phone, or website after this.\n"
@@ -183,8 +172,7 @@ def build_email_prompt(
         "════════════════════════\n"
         "RULES\n"
         "════════════════════════\n"
-        "- Allowed HTML: <p> <ul> <li> <strong> <a> only. No <div>, no <br>.\n"
-        "- Inline styles only on the CTA <a> button (already provided above).\n"
+        "- Allowed HTML: <p> <ul> <li> <strong> only. No <div>, no <br>, no <a> buttons.\n"
         "- Total body: 280-360 words.\n"
         "- Reference " + greeting + " and " + company + " naturally — not in every sentence.\n"
         "- Output JSON ONLY. No markdown fences, no explanation outside the JSON.\n\n"
