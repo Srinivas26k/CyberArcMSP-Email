@@ -89,8 +89,8 @@ async def apollo_search(
         "X-Api-Key": api_key,
     }
 
-    # Employee ranges — same defaults as Code.gs
-    default_employee_ranges = ["11,50", "51,200", "201,500", "501,1000"]
+    # Employee ranges — always 100+ minimum
+    default_employee_ranges = ["101,250", "251,500", "501,1000", "1001,5000", "5001,1000000"]
     employee_ranges = company_sizes if company_sizes else default_employee_ranges
 
     collected: list[dict] = []

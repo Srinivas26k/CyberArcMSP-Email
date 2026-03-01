@@ -58,7 +58,12 @@ async function runSearch() {
   const btn       = document.getElementById('apollo-search-btn');
   const resultsEl = document.getElementById('search-results-body');
   const industry  = document.getElementById('keywords-input')?.value.trim() || '';
-  const perPage   = parseInt(document.getElementById('search-limit-select')?.value) || 25;
+  const limitVal     = parseInt(document.getElementById('search-limit-input')?.value) || 50;
+  const perPage       = Math.max(1, Math.min(500, limitVal));
+  const sizeVal       = document.getElementById('company-size-select')?.value || 'all';
+  const companySizes  = sizeVal === 'all'
+    ? ['101,250', '251,500', '501,1000', '1001,5000', '5001,1000000']
+    : [sizeVal];
 
   if (!tags.titles.length) { toast('Add at least one job title', 'warning'); return; }
 
@@ -71,7 +76,7 @@ async function runSearch() {
     </div>`;
 
   try {
-    const res   = await leadsAPI.apollo({ titles: tags.titles, industry, locations: tags.locations, target_count: perPage });
+    const res   = await leadsAPI.apollo({ titles: tags.titles, industry, locations: tags.locations, company_sizes: companySizes, target_count: perPage });
     const leads = res.leads || [];
     const badge = document.getElementById('search-count-badge');
     if (badge) badge.textContent = leads.length ? `${leads.length} found` : '';
