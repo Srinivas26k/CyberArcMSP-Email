@@ -353,16 +353,23 @@
       </div>
       <div class="grid grid--2">
         <div class="panel">
-          <div class="panel__header"><span>API Keys</span></div>
+          <div class="panel__header">
+            <span>LLM Providers</span>
+            <button class="btn btn--sm btn--ghost" id="add-llm-slot-btn" type="button">+ Add Provider</button>
+          </div>
           <div class="panel__body">
-            <label>Apollo.io API Key<input type="password" id="st-apollo-key" placeholder="ap_…" autocomplete="off" /></label>
-            <label>OpenAI / LLM Key<input type="password" id="st-openai-key" placeholder="sk-…" autocomplete="off" /></label>
-            <label>AI Model<input type="text" id="st-model" placeholder="e.g. gpt-4o" /></label>
+            <p style="font-size:0.78rem;color:var(--muted-2);margin:0 0 12px;">
+              Providers are tried in order — Slot 1 first, then Slot 2, etc. Add up to 5.
+              Supported: <strong>Groq</strong>, <strong>OpenRouter</strong>, <strong>OpenAI</strong>,
+              <strong>Anthropic</strong>, <strong>Gemini</strong>.
+            </p>
+            <div id="llm-slots-container"></div>
           </div>
         </div>
         <div class="panel">
-          <div class="panel__header"><span>Email Defaults</span></div>
+          <div class="panel__header"><span>Email Defaults &amp; Other Keys</span></div>
           <div class="panel__body">
+            <label>Apollo.io API Key<input type="password" id="st-apollo-key" placeholder="e3az…" autocomplete="off" /></label>
             <label>Default Subject<input type="text" id="st-subject" placeholder="Quick question about {{company}}" /></label>
             <label>Reply-To Address (optional)<input type="email" id="st-reply-to" placeholder="you@company.com" /></label>
             <label>Daily send limit (per inbox)<input type="number" id="st-daily-limit" min="1" max="500" value="50" /></label>
