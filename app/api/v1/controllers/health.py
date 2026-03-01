@@ -30,9 +30,9 @@ def dashboard_stats(session: Session = Depends(get_db_session)):
     accounts = session.exec(select(EmailAccount).where(EmailAccount.is_active)).all()
 
     total    = len(leads)
-    pending  = sum(1 for l in leads if l.status == "pending")
-    sent     = sum(1 for l in leads if l.status == "sent")
-    failed   = sum(1 for l in leads if l.status == "failed")
+    pending  = sum(1 for lead in leads if lead.status == "pending")
+    sent     = sum(1 for lead in leads if lead.status == "sent")
+    failed   = sum(1 for lead in leads if lead.status == "failed")
     replied  = len(replies)
 
     return {

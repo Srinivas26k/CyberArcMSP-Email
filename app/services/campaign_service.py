@@ -8,7 +8,7 @@ from app.repositories.account_repository import account_repository
 from app.utils.email_engine import EmailEngine
 from app.utils.llm_client import generate_email
 from app.utils.prompt import build_email_prompt
-from app.utils.company import wrap_email_template
+from app.utils.company import wrap_email_template, render_custom_template
 from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
 import re
 import random
@@ -144,9 +144,9 @@ class CampaignService:
                     else:
                         offices_str = str(offices_raw)
 
-                    # Replace static template wrapper with dynamic injects
-                    html_body = wrap_email_template(
-                        pkg["bodyHtml"],
+                    # Build branded HTML wrapper — use custom template if configured
+                    _tpl_ctx = dict(
+                        inner_html=pkg["bodyHtml"],
                         sender_email="{{SENDER_EMAIL}}",
                         sender_name="{{SENDER_NAME}}",
                         sender_title=sender_title,
@@ -157,6 +157,11 @@ class CampaignService:
                         company_website=org_web,
                         offices=offices_str,
                     )
+                    custom_tpl = (cfg.get("custom_email_template") or "").strip()
+                    if custom_tpl:
+                        html_body = render_custom_template(custom_tpl, **_tpl_ctx)
+                    else:
+                        html_body = wrap_email_template(**_tpl_ctx)
                     plain = CampaignService._html_to_plain(pkg["bodyHtml"])
 
                     results = await email_engine.send_batch(

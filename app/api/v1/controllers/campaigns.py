@@ -74,13 +74,14 @@ async def start_campaign(req: CampaignRequest, session: Session = Depends(get_db
                                 "model": _raw_cfg.get("openrouter_model", "")})
 
     runtime_cfg = {
-        "send_strategy": req.strategy,
-        "batch_size":    str(req.batch_size),
-        "providers":     _providers,
-        "apollo_key":    _raw_cfg.get("apollo_key", settings.apollo_api_key or ""),
-        "calendar_url":  _raw_cfg.get("calendar_url", settings.calendly_url or ""),
-        "sender_name":   _raw_cfg.get("sender_name",  settings.sender_name  or ""),
-        "sender_title":  _raw_cfg.get("sender_title", settings.sender_title or ""),
+        "send_strategy":        req.strategy,
+        "batch_size":           str(req.batch_size),
+        "providers":            _providers,
+        "apollo_key":           _raw_cfg.get("apollo_key", settings.apollo_api_key or ""),
+        "calendar_url":         _raw_cfg.get("calendar_url", settings.calendly_url or ""),
+        "sender_name":          _raw_cfg.get("sender_name",  settings.sender_name  or ""),
+        "sender_title":         _raw_cfg.get("sender_title", settings.sender_title or ""),
+        "custom_email_template": _raw_cfg.get("custom_email_template", "") or "",
     }
 
     campaign_state.set_running(True)

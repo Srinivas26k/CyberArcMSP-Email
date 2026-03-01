@@ -40,6 +40,7 @@ def get_settings(session: Session = Depends(get_db_session)):
         "openrouter_model": overrides.get("openrouter_model", ""),
         "send_strategy":   overrides.get("send_strategy", "round_robin"),
         "batch_size":      int(overrides.get("batch_size", 5)),
+        "custom_email_template": overrides.get("custom_email_template", ""),
         "calendar_url":    overrides.get("calendar_url", ""),
         "sender_name":     overrides.get("sender_name", ""),
         "sender_title":    overrides.get("sender_title", ""),
