@@ -17,3 +17,5 @@ class SettingsIn(BaseModel):
     send_strategy:         Optional[str] = None
     batch_size:            Optional[int] = None
     custom_email_template: Optional[str] = None   # full HTML with {{PLACEHOLDER}} tokens
+    email_style_instructions: Optional[str] = None  # user writing guide injected into prompt
+    sample_email_copy:     Optional[str] = None   # reference email for style matching

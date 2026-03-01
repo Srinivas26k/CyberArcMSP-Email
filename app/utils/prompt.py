@@ -27,8 +27,15 @@ def build_email_prompt(
     lead: dict,
     identity: IdentityProfile,
     services: List[KnowledgeBase],
+    style_instructions: str = "",
+    sample_email_copy: str = "",
 ) -> tuple[str, str]:
-    """Returns (system_prompt, user_prompt) built entirely from DB data + lead."""
+    """Returns (system_prompt, user_prompt) built entirely from DB data + lead.
+
+    style_instructions: user-provided free-text writing guide (tone, length, etc.)
+                        Injected into the prompt — the core structure remains protected.
+    sample_email_copy:  a real email the user likes — AI mimics its style/tone/length.
+    """
 
     # ── Lead data ─────────────────────────────────────────────────────────────
     first     = (lead.get("first_name") or "").strip()
@@ -122,7 +129,28 @@ def build_email_prompt(
         "  Tagline:  " + (sender_tagline or "N/A") + "\n\n"
         "SERVICES (pick 4-5 most relevant to " + industry + "):\n"
         + services_block + "\n\n"
-        "════════════════════════════════════\n"
+        + (
+            "════════════════════════\n"
+            "WRITING STYLE GUIDE\n"
+            "════════════════════════\n"
+            "The user has set specific style preferences. Apply them throughout the email:\n"
+            + style_instructions.strip() + "\n\n"
+            if style_instructions.strip() else ""
+        )
+        + (
+            "════════════════════════\n"
+            "STYLE REFERENCE — match this email's tone, sentence length, and voice\n"
+            "════════════════════════\n"
+            "Study the example below. Mirror its:\n"
+            "  • Sentence rhythm and average length\n"
+            "  • Formality level (casual / professional / warm-executive)\n"
+            "  • How it opens and closes\n"
+            "  • Paragraph length\n"
+            "Do NOT copy it word-for-word. Adapt to the current lead and services.\n\n"
+            + sample_email_copy.strip() + "\n\n"
+            if sample_email_copy.strip() else ""
+        )
+        + "════════════════════════════════════\n"
         "EXACT STRUCTURE — follow in order:\n"
         "════════════════════════════════════\n\n"
         "Subject line:\n"

@@ -94,8 +94,10 @@ async function loadPersona() {
       setVal('p-color',    p.primary_color || '#2563EB');
       setVal('p-offices',  p.offices_json  || '[]');
     }
-    // Load custom email template
-    setVal('p-custom-tpl', cfg?.custom_email_template || '');
+    // Load custom email template and writing style
+    setVal('p-custom-tpl',       cfg?.custom_email_template    || '');
+    setVal('p-style-instructions', cfg?.email_style_instructions || '');
+    setVal('p-sample-email',     cfg?.sample_email_copy        || '');
 
     const c = document.getElementById('pillars-container');
     if (!c) return;
@@ -151,14 +153,20 @@ async function savePersona() {
     if (title && prop) knowledge_base.push({ title, value_prop: prop });
   });
 
-  const customTpl = getVal('p-custom-tpl').trim();
+  const customTpl   = getVal('p-custom-tpl').trim();
+  const styleInstr  = getVal('p-style-instructions').trim();
+  const sampleEmail = getVal('p-sample-email').trim();
 
   try {
     await Promise.all([
       setupAPI.save({ profile, knowledge_base }),
-      settingsAPI.update({ custom_email_template: customTpl }),
+      settingsAPI.update({
+        custom_email_template:    customTpl,
+        email_style_instructions: styleInstr,
+        sample_email_copy:        sampleEmail,
+      }),
     ]);
-    toast('Identity saved & embedded to KnowledgeBase', 'success');
+    toast('Identity saved &amp; embedded to KnowledgeBase', 'success');
     applyBranding(profile);
     const banner = document.getElementById('onboarding-banner');
     if (banner) banner.style.display = 'none';

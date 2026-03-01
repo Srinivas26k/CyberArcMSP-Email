@@ -191,7 +191,11 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
         )
 
     lead_data = _lead_to_dict(lead)
-    sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+    sys_p, usr_p = build_email_prompt(
+        lead_data, identity, services,
+        cfg.get("email_style_instructions", ""),
+        cfg.get("sample_email_copy", ""),
+    )
 
     try:
         pkg = await generate_email(sys_p, usr_p, providers=providers)
@@ -248,7 +252,11 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
             raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
         identity, services = _get_identity_and_services(session)
         lead_data = _lead_to_dict(lead)
-        sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+        sys_p, usr_p = build_email_prompt(
+            lead_data, identity, services,
+            cfg.get("email_style_instructions", ""),
+            cfg.get("sample_email_copy", ""),
+        )
         try:
             pkg = await generate_email(sys_p, usr_p, providers=providers)
         except RuntimeError as exc:
