@@ -153,10 +153,6 @@ async def apollo_search(
                     break
                 batch = person_ids[batch_start:batch_start + ENRICH_BATCH_SIZE]
 
-                enrich_payload = {
-                    "details":                [{" id": pid} for pid in batch],
-                    "reveal_personal_emails": True,
-                }
                 # Note: Code.gs uses query param, we support both
                 enrich_url = APOLLO_ENRICH_URL + "?reveal_personal_emails=true"
 
