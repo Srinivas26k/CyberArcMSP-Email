@@ -12,12 +12,12 @@ The path can be overridden by setting the APP_DATA_DIR environment variable
 """
 import os
 from sqlmodel import SQLModel, create_engine
+from app.core.vault import VaultManager
 
 
 def _resolve_db_path() -> str:
     """
     Return the absolute path to database.db, honouring APP_DATA_DIR if set.
-    Falls back gracefully to the project root for dev mode.
     """
     app_data_dir = os.environ.get("APP_DATA_DIR", "").strip()
     if app_data_dir:
@@ -29,6 +29,9 @@ def _resolve_db_path() -> str:
 
 
 _DB_PATH = _resolve_db_path()
+
+# Revert to standard SQLite, we will rely on VaultManager for Application-Layer AES encryption
+# to bypass the C-binary compilation issues of SQLCipher on random environments.
 DATABASE_URL = f"sqlite:///{_DB_PATH}"
 
 engine = create_engine(
@@ -40,6 +43,9 @@ engine = create_engine(
 
 def init_db():
     """Create all tables. Called once on startup."""
-    # Import models so SQLModel.metadata is populated
     import app.models  # noqa: F401
+    
+    # Pre-heat the Vault engine so key generation occurs safely on boot
+    VaultManager._initialize()
+    
     SQLModel.metadata.create_all(engine)
