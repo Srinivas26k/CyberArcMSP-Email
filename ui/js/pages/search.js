@@ -85,7 +85,12 @@ async function runSearch() {
       resultsEl.innerHTML = `<div class="empty-state"><div class="empty-state__icon">🔍</div><p class="empty-state__text">No leads found. Try broader titles or fewer location filters.</p></div>`;
     } else {
       renderResults(leads);
-      toast(`Found ${res.found ?? leads.length} leads · ${res.added ?? 0} new saved`, 'success');
+      const added   = res.added   ?? 0;
+      const skipped = res.skipped ?? 0;
+      const parts   = [];
+      if (added   > 0) parts.push(`${added} new saved`);
+      if (skipped > 0) parts.push(`${skipped} already in database`);
+      toast(`Found ${leads.length} lead${leads.length !== 1 ? 's' : ''}${parts.length ? ' · ' + parts.join(', ') : ''}`, 'success');
     }
   } catch (e) {
     resultsEl.innerHTML = `
