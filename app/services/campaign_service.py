@@ -11,6 +11,7 @@ from app.utils.prompt import build_email_prompt
 from app.utils.company import wrap_email_template
 from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
 import re
+import random
 
 import logging
 logger = logging.getLogger(__name__)
@@ -57,9 +58,11 @@ class CampaignService:
                     batch_size=int(cfg.get("batch_size", 5)),
                 )
 
-            for lead_id in lead_ids:
+            for i, lead_id in enumerate(lead_ids, 1):
                 if not running_flag_check():
                     break
+                    
+                await broadcast_cb("stat", {"message": f"Drafting email {i} of {len(lead_ids)}..."})
 
                 with Session(engine) as session:
                     lead = session.get(Lead, lead_id)
@@ -82,10 +85,27 @@ class CampaignService:
                         # Load dynamic Identity
                         identity = session.exec(select(IdentityProfile)).first()
                         if not identity:
-                            identity = IdentityProfile(name="Generic Corp", tagline="Solutions")
+                            import os
+                            from app.utils.company import COMPANY_PROFILE, SENDER_DEFAULTS, SERVICE_PORTFOLIO
                             
-                        # Load Contextual Services (later we will use SrvDB semantic search here, for now grab top 3)
-                        services = session.exec(select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(3)).all()
+                            identity = IdentityProfile(
+                                name=os.getenv("SENDER_NAME", COMPANY_PROFILE.get("name", "CyberArc MSP")),
+                                tagline=COMPANY_PROFILE.get("tagline", "Security Solutions"),
+                                website=COMPANY_PROFILE.get("website", ""),
+                                logo_url=COMPANY_PROFILE.get("logo_url", ""),
+                                calendly_url=COMPANY_PROFILE.get("calendly", ""),
+                                sender_title=os.getenv("SENDER_TITLE", SENDER_DEFAULTS.get("title", "Solutions Architect")),
+                                sender_name=os.getenv("SENDER_NAME", SENDER_DEFAULTS.get("name", "CyberArc MSP"))
+                            )
+                            # Provide fallback services from company.py
+                            services = [
+                                KnowledgeBase(title="Cybersecurity", value_prop=SERVICE_PORTFOLIO.get("cybersecurity", "")),
+                                KnowledgeBase(title="Cloud & DevSecOps", value_prop=SERVICE_PORTFOLIO.get("cloud_devsecops", "")),
+                                KnowledgeBase(title="AI & Automation", value_prop=SERVICE_PORTFOLIO.get("ai_toolkit", ""))
+                            ]
+                        else:
+                            # Load Contextual Services (later we will use SrvDB semantic search here, for now grab top 3)
+                            services = session.exec(select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(3)).all()
 
                     # Dynamic prompt generation
                     sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services)
@@ -190,7 +210,16 @@ class CampaignService:
                     await broadcast_cb("lead_update", {"lead_id": lead_id, "status": "failed",
                                                       "error": str(exc)[:200]})
 
-                await asyncio.sleep(delay)
+                # Adaptive Delay: Randomized delay between sends to mimic human behavior and avoid SMTP flagging
+                if i < len(lead_ids):
+                    actual_delay = random.randint(60, 120) if delay <= 0 else delay
+                    await broadcast_cb("stat", {"message": f"Adaptive Delay: Waiting {actual_delay}s before next send..."})
+                    
+                    # Sleep in 1-second chunks so we can interrupt immediately if stopped
+                    for _ in range(actual_delay):
+                        if not running_flag_check():
+                            break
+                        await asyncio.sleep(1)
 
         finally:
             await broadcast_cb("campaign_done", {"message": "Campaign finished"})

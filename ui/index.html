@@ -1442,6 +1442,80 @@
       </div>
     </div>
 
+    <!-- ═══════════════ PERSONA ═══════════════ -->
+    <div id="page-persona" class="page">
+      <div class="content">
+        <div class="panel-grid" style="grid-template-columns: 1fr 1fr">
+          <div class="panel">
+            <div class="panel-header"><span class="panel-title">🎭 Core Identity Profile</span></div>
+            <div class="panel-body">
+              <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" id="p-name" placeholder="e.g. CyberArc MSP">
+              </div>
+              <div class="form-group">
+                <label>Company Tagline</label>
+                <input type="text" id="p-tagline" placeholder="e.g. Enterprise-Grade Security">
+              </div>
+              <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" id="p-website" placeholder="https://...">
+              </div>
+              <div class="form-group">
+                <label>Logo URL (For Emails)</label>
+                <input type="url" id="p-logo" placeholder="https://...">
+              </div>
+
+              <div style="font-weight:600; margin-top:20px; margin-bottom:12px;">Email Personalization Defaults</div>
+
+              <div class="form-group">
+                <label>Default Sender Title</label>
+                <input type="text" id="p-title" placeholder="e.g. Solutions Architect">
+              </div>
+              <div class="form-group">
+                <label>Calendly / Booking Link</label>
+                <input type="text" id="p-calendar" placeholder="https://calendly.com/...">
+              </div>
+              <div class="form-group">
+                <label>Primary Brand Color (Hex)</label>
+                <input type="text" id="p-color" placeholder="#1A56DB">
+              </div>
+              <div class="form-group">
+                <label>Office Locations JSON Array</label>
+                <textarea id="p-offices" rows="3" placeholder='[{"name": "HQ", "address": "New York"}]'></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">🧠 AI Knowledge Base Pillars</span>
+              <button class="btn btn-ghost btn-sm" onclick="addPillar()">+ Add Pillar</button>
+            </div>
+            <div class="panel-body">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">
+                These pillars are stored in SrvDB (Vector Store). The AI will dynamically select up to 3 highly relevant
+                services per lead to construct personalized email copy.
+              </div>
+
+              <div id="pillars-container"
+                style="display:flex; flex-direction:column; gap:16px; overflow-y:auto; max-height:450px; padding-right:8px;">
+                <!-- JavaScript injected KnowledgeBase forms -->
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px;"
+            onclick="savePersona()">
+            Save Identity & Embed KnowledgeBase
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══════════════ RECORDS & BACKUP ═══════════════ -->
     <div id="page-records" class="page">
       <div class="content">
@@ -1514,7 +1588,8 @@
               style="padding:14px;background:rgba(0,112,243,.05);border:1px solid rgba(0,112,243,.15);border-radius:10px;margin-bottom:14px;">
               <div style="font-weight:600;font-size:13px;margin-bottom:8px;">📋 Required CSV Format</div>
               <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Your CSV must have a header row with
-                <strong>these exact column names</strong> (order doesn't matter):</p>
+                <strong>these exact column names</strong> (order doesn't matter):
+              </p>
               <table style="font-size:12px;width:100%;border-collapse:collapse;">
                 <thead>
                   <tr style="border-bottom:1px solid var(--border);">
@@ -1731,7 +1806,7 @@
       try {
         const parsed = new URL(raw, window.location.origin);
         if (['http:', 'https:', 'mailto:'].includes(parsed.protocol)) return parsed.href;
-      } catch (_) {}
+      } catch (_) { }
       return '';
     }
     function sanitizePreviewHtml(input) {
@@ -1767,6 +1842,7 @@
       replies: 'Reply Inbox',
       inboxes: 'Sender Accounts',
       settings: 'Settings',
+      persona: 'Brand Persona',
       records: 'Records & Backup',
     };
 
@@ -1783,6 +1859,7 @@
       if (name === 'outbox') { loadOutbox(); populateSendAccountSelect(); }
       if (name === 'replies') loadReplies();
       if (name === 'inboxes') loadInboxes();
+      if (name === 'persona') loadPersona();
       if (name === 'settings') initSettings();
       if (name === 'records') loadRecords();
     }
@@ -2463,6 +2540,86 @@
         toast('Settings saved', 'success');
         refreshStats();
       } catch (e) { toast(e.message, 'error'); }
+    }
+
+    // ────────────────────────────────
+    // PERSONA MANAGEMENT
+    // ────────────────────────────────
+    async function loadPersona() {
+      try {
+        const data = await api('/api/setup');
+        if (data && data.profile) {
+          const p = data.profile;
+          document.getElementById('p-name').value = p.name || '';
+          document.getElementById('p-tagline').value = p.tagline || '';
+          document.getElementById('p-website').value = p.website || '';
+          document.getElementById('p-logo').value = p.logo_url || '';
+          document.getElementById('p-title').value = p.sender_title || '';
+          document.getElementById('p-calendar').value = p.calendly_url || '';
+          document.getElementById('p-color').value = p.primary_color || '';
+          document.getElementById('p-offices').value = p.offices_json || '[]';
+        }
+
+        const c = document.getElementById('pillars-container');
+        c.innerHTML = '';
+        if (data && data.knowledge_base && data.knowledge_base.length > 0) {
+          data.knowledge_base.forEach(kb => addPillar(kb.title, kb.value_prop));
+        } else {
+          addPillar('', ''); // Add one empty block to start
+        }
+      } catch (e) {
+        toast('Failed to load Persona: ' + e.message, 'error');
+      }
+    }
+
+    function addPillar(title = '', prop = '') {
+      const c = document.getElementById('pillars-container');
+      const div = document.createElement('div');
+      div.className = 'kb-pillar form-group';
+      div.style = 'border: 1px solid var(--border); border-radius: 8px; padding: 12px; background: var(--surface2);';
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+          <label style="margin:0;">Service Pillar Name</label>
+          <button class="btn btn-ghost btn-sm" onclick="this.parentElement.parentElement.remove()" style="color:var(--danger); padding:0 8px;">✕ Remove</button>
+        </div>
+        <input type="text" class="kb-title" placeholder="e.g. Cloud Migration" value="${escHtml(title)}" style="margin-bottom:8px;">
+        <label>Value Proposition (How does this solve the client's problem?)</label>
+        <textarea class="kb-prop" rows="2" placeholder="e.g. We seamlessly migrate legacy workloads...">${escHtml(prop)}</textarea>
+      `;
+      c.appendChild(div);
+    }
+
+    async function savePersona() {
+      const profileInfo = {
+        name: document.getElementById('p-name').value,
+        tagline: document.getElementById('p-tagline').value,
+        website: document.getElementById('p-website').value,
+        logo_url: document.getElementById('p-logo').value,
+        sender_title: document.getElementById('p-title').value,
+        calendly_url: document.getElementById('p-calendar').value,
+        primary_color: document.getElementById('p-color').value,
+        offices_json: document.getElementById('p-offices').value
+      };
+
+      const kbs = [];
+      document.querySelectorAll('.kb-pillar').forEach(div => {
+        const title = div.querySelector('.kb-title').value.trim();
+        const prop = div.querySelector('.kb-prop').value.trim();
+        if (title && prop) kbs.push({ title, value_prop: prop });
+      });
+
+      const payload = {
+        profile: profileInfo,
+        knowledge_base: kbs
+      };
+
+      try {
+        toast('Encrypting Profile & Embedding to Vector Store...', 'info', 5000);
+        await api('/api/setup', 'POST', payload);
+        toast('Persona Saved & Embedded Successfully', 'success');
+      } catch (e) {
+        toast('Error saving persona: ' + e.message, 'error');
+      }
     }
 
     // CSV Upload
