@@ -99,9 +99,11 @@ class CampaignService:
                             ).all()
 
                     # Dynamic prompt generation
-                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services)
+                    _style = cfg.get("email_style_instructions", "")
+                    _sample = cfg.get("sample_email_copy", "")
+                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services, _style, _sample)
                     sanitized_lead_data = PayloadSanitizer.truncate_context(lead_data, usr_p_temp, max_chars=4000)
-                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, services)
+                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, services, _style, _sample)
                     
                     pkg = None
                     for attempt in range(2):

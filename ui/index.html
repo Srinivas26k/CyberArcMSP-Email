@@ -408,9 +408,11 @@
     <!-- AI IDENTITY -->
     <div id="page-persona" class="page">
       <div class="section-header">
-        <div><h1 class="section-header__title">AI Identity</h1><p class="section-header__sub">Your brand profile and knowledge base for AI-personalised emails</p></div>
+        <div><h1 class="section-header__title">AI Identity</h1><p class="section-header__sub">Your brand profile, writing style, and knowledge base for AI-personalised emails</p></div>
         <button class="btn" id="save-persona-btn">Save Identity &amp; Embed KnowledgeBase</button>
       </div>
+
+      <!-- ROW 1: Company Profile + Branding -->
       <div class="grid grid--2">
         <div class="panel">
           <div class="panel__header"><span>Company Profile</span></div>
@@ -437,6 +439,55 @@
           </div>
         </div>
       </div>
+
+      <!-- ROW 2: Email Writing Style (NEW) -->
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel__header">
+          <span>✍️ Email Writing Style</span>
+          <span style="font-size:11px;color:var(--muted);font-weight:400;">The AI structure stays protected — you control the voice &amp; tone</span>
+        </div>
+        <div class="panel__body">
+          <div class="info-box info-box--brand" style="margin-bottom:16px;">
+            <strong>How it works:</strong> The core email logic (personalization, structure, anti-spam) is handled automatically.
+            These controls let you define <em>how</em> the AI writes — like giving a copywriter a brief.
+            Leave both blank to use the default executive B2B tone.
+          </div>
+          <div class="grid grid--2">
+            <div>
+              <label style="font-weight:600;font-size:13px;margin-bottom:6px;display:block;">
+                Writing Instructions
+                <span style="font-weight:400;color:var(--muted);font-size:11px;"> — tell the AI how to write</span>
+              </label>
+              <textarea id="p-style-instructions" rows="8"
+                placeholder="Examples:
+• Keep emails under 120 words — short and punchy
+• Use a conversational, friendly tone (not corporate)
+• Always open with a question related to their industry
+• Avoid technical jargon — speak in business outcomes
+• Write in first person, singular (I, not we)
+• For B2C: use emojis sparingly in subject line only"></textarea>
+              <p style="font-size:11px;color:var(--muted);margin-top:6px;">These instructions are injected into every AI prompt. The core personalization &amp; anti-spam logic always runs on top.</p>
+            </div>
+            <div>
+              <label style="font-weight:600;font-size:13px;margin-bottom:6px;display:block;">
+                Sample Email Copy
+                <span style="font-weight:400;color:var(--muted);font-size:11px;"> — paste a real email you love</span>
+              </label>
+              <textarea id="p-sample-email" rows="8"
+                placeholder="Paste a real cold email that got a great response. The AI will study its:
+• Sentence rhythm and length
+• Opening &amp; closing style
+• Formality level
+• Paragraph structure
+
+...and mirror those in every email it writes. It will NOT copy the content — only the style."></textarea>
+              <p style="font-size:11px;color:var(--muted);margin-top:6px;">Your sample is never sent anywhere. It's used only as a style reference for the AI — like showing a designer a mood board.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: AI Knowledge Base -->
       <div class="panel" style="margin-top:16px;">
         <div class="panel__header"><span>AI Knowledge Base</span><button class="btn btn--ghost btn--sm" id="add-pillar-btn">+ Add Pillar</button></div>
         <div class="panel__body">
@@ -445,10 +496,10 @@
         </div>
       </div>
 
-      <!-- EMAIL TEMPLATE EDITOR -->
+      <!-- ROW 4: Email Template (HTML wrapper — optional, advanced) -->
       <div class="panel" style="margin-top:16px;">
         <div class="panel__header">
-          <span>Email Template</span>
+          <span>Email Template <span style="font-size:11px;color:var(--muted);font-weight:400;">(optional — HTML wrapper)</span></span>
           <div style="display:flex;gap:8px;align-items:center;">
             <label class="btn btn--ghost btn--sm" style="cursor:pointer;margin:0;">
               📁 Upload .html
