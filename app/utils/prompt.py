@@ -37,6 +37,9 @@ def build_email_prompt(lead: dict, identity: IdentityProfile, services: List[Kno
     sender_tagline  = (identity.tagline      or "").strip()
     sender_website  = (identity.website      or "").strip()
     sender_calendly = (identity.calendly_url or "").strip()
+    # sender_name is the individual's name (e.g. "John Smith"); fall back to
+    # the company name so the intro is never a literal placeholder.
+    sender_name     = (identity.sender_name  or "").strip() or sender_org
 
     # ── Services (from DB KnowledgeBase rows) ────────────────────────────────
     svc_lines = []
@@ -49,17 +52,32 @@ def build_email_prompt(lead: dict, identity: IdentityProfile, services: List[Kno
         svc_lines = ["  • Our Services — Tailored solutions for your needs."]
     services_block = "\n".join(svc_lines)
 
-    # ── Calendly CTA line ────────────────────────────────────────────────────
-    cta_link = (
-        f'<p>👉 Book a time here: <a href="{sender_calendly}">{sender_calendly}</a></p>'
-        if sender_calendly else
-        "<p>Please reply with a time that works for a quick call.</p>"
+    # ── Calendly CTA — rendered as a styled button, not a bare link ──────────
+    if sender_calendly:
+        cta_html = (
+            f'<p style="margin:20px 0;">'
+            f'<a href="{sender_calendly}" '
+            f'style="display:inline-block;background:#1A56DB;color:#ffffff;'
+            f'padding:12px 28px;border-radius:6px;text-decoration:none;'
+            f'font-weight:600;font-size:15px;letter-spacing:0.01em;">'
+            f'Book a 30-min call &rarr;</a></p>'
+        )
+    else:
+        cta_html = "<p>Reply with a time that works for a quick 30-minute call.</p>"
+
+    # Pre-compute strings used inside the user_prompt f-string so we don't
+    # hit Python <3.12 restrictions on nested quotes inside f-string expressions.
+    intro_opener = (
+        f"I'm {sender_name}, reaching out from {sender_org}"
+        if sender_name and sender_name != sender_org
+        else f"I'm reaching out from {sender_org or 'our company'}"
     )
+    sender_supports = f"{sender_org or 'we'} support{'s' if sender_org else ''}"
 
     # ── System prompt ────────────────────────────────────────────────────────
     system_prompt = (
-        f"You are a senior executive at {sender_org or 'a technology company'} writing a "
-        f"B2B cold outreach email. {sender_tagline}. "
+        f"You are {sender_name or 'a senior executive'} at {sender_org or 'a technology company'} "
+        f"writing a B2B cold outreach email. {sender_tagline}. "
         f"Write in a professional, warm, human tone — concise, no buzzwords, no hype. "
         f"Output ONLY a valid JSON object. "
         f'Schema: {{"subject": "string ≤70 chars", "bodyHtml": "HTML body — stop after Warm regards, — NO name/signature"}}'
@@ -92,16 +110,15 @@ Body (in order, no deviations):
 1. <p>Dear {greeting},</p>
 
 2. <p>INTRO — 2 sentences only:
-   "I hope this message finds you well. My name is [Your Name], reaching out from
-   {sender_org or "our company"} — [one sentence: what {sender_org or "the company"} does and
+   "I hope this message finds you well. {intro_opener} — [one sentence: what {sender_org or "the company"} does and
    which industries/regions it serves]."
-   Use [Your Name] as a literal placeholder — do NOT invent a name.</p>
+   Use the sender name and company exactly as given — do NOT invent or change them.</p>
 
 3. <p>CONTEXT — 2-3 sentences about ONE real challenge facing the {industry} sector in {year}.
    Reference actual industry standards, threats, or trends (e.g. regulatory requirements,
    cybersecurity threats, AI adoption pressure). Write factually — no invented stats about {company}.</p>
 
-4. <p>Here's how {sender_org or "we"} support{"s" if sender_org else ""} {industry} organizations like {company}:</p>
+4. <p>Here's how {sender_supports} {industry} organizations like {company}:</p>
 
 5. <ul> — exactly 4 <li> items. Each must be ONE sentence:
    <strong>Service Name —</strong> brief specific capability or methodology. No paragraph. No metrics unless they come from our services list above.
@@ -110,7 +127,7 @@ Body (in order, no deviations):
    (client count, retention rate, delivery time, etc.). Skip entirely if none apply.
 
 7. <p>CTA — 1 sentence inviting a 30-minute call to discuss their specific situation.</p>
-{cta_link}
+{cta_html}
 
 8. <p>Looking forward to connecting.</p>
    <p>Warm regards,</p>
