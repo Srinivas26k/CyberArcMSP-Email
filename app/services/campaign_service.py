@@ -146,12 +146,17 @@ class CampaignService:
                     org_tagline = getattr(identity, 'tagline', "")
                     org_logo = getattr(identity, 'logo_url', "")
                     org_web = getattr(identity, 'website', "")
-                    offices_list = getattr(identity, 'offices', [])
-                    
+                    offices_raw = getattr(identity, 'offices', [])
+                    # offices can be List[dict] (from DB) or str (legacy) — normalise to str
+                    if isinstance(offices_raw, list):
+                        offices_str = " • ".join(
+                            o.get("city") or o.get("name") or str(o)
+                            for o in offices_raw if o
+                        ) if offices_raw else ""
+                    else:
+                        offices_str = str(offices_raw)
+
                     # Replace static template wrapper with dynamic injects
-                    # NOTE: wrap_email_template still exists in company.py which we will delete shortly.
-                    # Instead, we will generate the raw HTML straight here or from a DB template record.
-                    
                     html_body = wrap_email_template(
                         pkg["bodyHtml"],
                         sender_email="{{SENDER_EMAIL}}",
@@ -162,7 +167,7 @@ class CampaignService:
                         company_tagline=org_tagline,
                         company_logo=org_logo,
                         company_website=org_web,
-                        offices=offices_list,
+                        offices=offices_str,
                     )
                     plain = CampaignService._html_to_plain(pkg["bodyHtml"])
 

@@ -561,5 +561,61 @@
 <!-- Toast container -->
 <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
+<!-- EMAIL EDITOR DRAWER -->
+<div id="email-editor-overlay" class="drawer-overlay" style="display:none;"></div>
+<aside id="email-editor-drawer" class="lead-drawer" style="width:580px;" aria-hidden="true">
+  <div class="lead-drawer__header">
+    <div>
+      <h3 class="lead-drawer__name" id="eed-name">—</h3>
+      <p class="lead-drawer__sub" id="eed-sub">—</p>
+    </div>
+    <button class="btn btn--ghost btn--sm" id="eed-close">✕</button>
+  </div>
+
+  <div class="lead-drawer__body" style="padding:16px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;">
+
+    <!-- Loading state -->
+    <div id="eed-loading" style="text-align:center;padding:48px 0;">
+      <div class="spinner" style="width:32px;height:32px;border-width:3px;margin:0 auto 14px;"></div>
+      <p style="color:var(--muted);font-size:13px;margin:0;">Crafting your email with AI…</p>
+    </div>
+
+    <!-- Email content (shown after generation) -->
+    <div id="eed-content" style="display:none;flex-direction:column;gap:12px;">
+
+      <!-- Subject line -->
+      <div>
+        <label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;display:block;margin-bottom:4px;">Subject</label>
+        <input id="eed-subject" type="text" class="input" style="width:100%;font-weight:600;" placeholder="Email subject…" />
+      </div>
+
+      <!-- Tab bar -->
+      <div style="display:flex;border-bottom:2px solid var(--border);gap:0;">
+        <button id="eed-tab-preview" style="padding:7px 16px;font-size:12px;font-weight:600;background:none;border:none;border-bottom:2px solid var(--primary);margin-bottom:-2px;color:var(--primary);cursor:pointer;">&#128065; Preview</button>
+        <button id="eed-tab-edit"    style="padding:7px 16px;font-size:12px;font-weight:600;background:none;border:none;color:var(--muted);cursor:pointer;">&#9998; Edit HTML</button>
+      </div>
+
+      <!-- Preview pane -->
+      <div id="eed-preview-pane">
+        <iframe id="eed-iframe" style="width:100%;height:400px;border:1px solid var(--border);border-radius:6px;display:block;" sandbox="allow-same-origin"></iframe>
+      </div>
+
+      <!-- Edit pane (hidden) -->
+      <div id="eed-edit-pane" style="display:none;">
+        <textarea id="eed-body-html" class="textarea" style="width:100%;height:400px;font-family:monospace;font-size:11.5px;resize:vertical;" placeholder="HTML email body…"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="lead-drawer__footer" style="display:flex;flex-direction:column;gap:8px;">
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn--ghost btn--sm" id="eed-regen-btn" style="flex:1;" disabled>🔄 Regenerate</button>
+      <button class="btn btn--ghost btn--sm" id="eed-save-btn"  style="flex:1;" disabled>💾 Save Draft</button>
+    </div>
+    <button class="btn btn--success" id="eed-send-btn" disabled>📤 Send This Lead</button>
+  </div>
+</aside>
+
 </body>
 </html>

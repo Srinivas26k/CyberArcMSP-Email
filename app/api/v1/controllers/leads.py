@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from sqlmodel import Session
+from sqlmodel import Session, select
 from app.api.dependencies import get_db_session
 from app.models.lead import Lead
 from app.schemas.lead import LeadIn, ApolloQuery
@@ -7,21 +7,78 @@ from app.services.lead_service import lead_service
 from app.utils.apollo_search import apollo_search as _apollo_search
 from app.core.config import settings
 from app.repositories.lead_repository import lead_repository
+import re
 
 router = APIRouter()
 
+
 def _lead_to_dict(lead: Lead) -> dict:
+    """Full lead dict — all fields, used for API responses and LLM context."""
     return {
-        "id": lead.id,
-        "email": lead.email,
-        "first_name": lead.first_name,
-        "last_name": lead.last_name,
-        "company": lead.company,
-        "role": lead.role,
-        "industry": lead.industry,
-        "status": lead.status,
-        "created_at": lead.created_at
+        "id":              lead.id,
+        "email":           lead.email,
+        "first_name":      lead.first_name,
+        "last_name":       lead.last_name,
+        "company":         lead.company,
+        "role":            lead.role,
+        "industry":        lead.industry,
+        "location":        lead.location,
+        "seniority":       lead.seniority,
+        "employees":       lead.employees,
+        "website":         lead.website,
+        "linkedin":        lead.linkedin,
+        "headline":        lead.headline,
+        "phone":           lead.phone,
+        "departments":     lead.departments,
+        "org_industry":    lead.org_industry,
+        "org_founded":     lead.org_founded,
+        "org_description": lead.org_description,
+        "org_funding":     lead.org_funding,
+        "org_tech_stack":  lead.org_tech_stack,
+        "status":          lead.status,
+        "draft_subject":   lead.draft_subject,
+        "draft_body":      lead.draft_body,
+        "created_at":      lead.created_at,
     }
+
+
+def _load_cfg(session: Session) -> dict:
+    """Load LLM + campaign config from the settings table."""
+    from app.models.setting import Setting
+    SENSITIVE = {"groq_key", "openrouter_key", "apollo_key"}
+    rows = session.exec(select(Setting)).all()
+    cfg: dict = {}
+    for row in rows:
+        cfg[row.key] = row.get_decrypted_value() if row.key in SENSITIVE else row.value
+    return cfg
+
+
+def _get_identity_and_services(session: Session):
+    """Return (identity, services) from DB.
+    Falls back to empty placeholder values if onboarding hasn't been completed.
+    """
+    from app.models.identity import IdentityProfile, KnowledgeBase
+    identity = session.exec(select(IdentityProfile)).first()
+    if not identity:
+        # Onboarding not yet completed — use empty identity so LLM uses generic language
+        identity = IdentityProfile(name="", tagline="", website="",
+                                   logo_url="", calendly_url="",
+                                   sender_name="", sender_title="")
+        services = []
+    else:
+        services = session.exec(
+            select(KnowledgeBase).where(KnowledgeBase.identity_id == identity.id).limit(6)
+        ).all()
+    return identity, services
+
+def _offices_to_str(offices) -> str:
+    """Convert IdentityProfile.offices (List[dict]) or str to a plain bullet string."""
+    if isinstance(offices, list):
+        return " \u2022 ".join(
+            o.get("city") or o.get("name") or str(o) for o in offices if o
+        )
+    return str(offices) if offices else ""
+
 
 @router.get("/")
 def list_leads(session: Session = Depends(get_db_session)):
@@ -78,6 +135,150 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(get_db_sessio
     except RuntimeError as exc:
         raise HTTPException(400, str(exc))
 
-    resp = lead_service.add_imported_leads(session, results)
-    resp["credits_used"] = credits_used
-    return resp
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMAIL DRAFT ENDPOINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post("/{lead_id}/preview")
+async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_session)):
+    """Generate an AI email draft for a single lead. Stores it in draft_subject / draft_body."""
+    from app.utils.prompt import build_email_prompt
+    from app.utils.llm_client import generate_email
+
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+
+    identity, services = _get_identity_and_services(session)
+    cfg = _load_cfg(session)
+
+    # Pre-flight: at least one LLM key must be set
+    if not cfg.get("groq_key") and not cfg.get("openrouter_key"):
+        raise HTTPException(400, "No LLM API key configured. Go to Settings and add your Groq or OpenRouter key.")
+
+    lead_data = _lead_to_dict(lead)
+    sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+
+    try:
+        pkg = await generate_email(
+            sys_p, usr_p,
+            groq_key=cfg.get("groq_key", ""),
+            openrouter_key=cfg.get("openrouter_key", ""),
+            preferred_provider=cfg.get("llm_provider", "groq"),
+            openrouter_model=cfg.get("openrouter_model") or None,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc))
+
+    lead.draft_subject = pkg["subject"]
+    lead.draft_body    = pkg["bodyHtml"]
+    session.add(lead)
+    session.commit()
+
+    return {"subject": pkg["subject"], "body_html": pkg["bodyHtml"]}
+
+
+@router.patch("/{lead_id}/draft")
+def save_lead_draft(lead_id: int, body: dict, session: Session = Depends(get_db_session)):
+    """Persist an edited email draft (subject + body HTML) for a lead."""
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    if "draft_subject" in body:
+        lead.draft_subject = body["draft_subject"]
+    if "draft_body" in body:
+        lead.draft_body = body["draft_body"]
+    session.add(lead)
+    session.commit()
+    return {"status": "saved"}
+
+
+@router.post("/{lead_id}/send")
+async def send_single_lead(lead_id: int, session: Session = Depends(get_db_session)):
+    """Send the saved draft for one lead. Generates fresh if no draft is stored."""
+    from app.utils.prompt import build_email_prompt
+    from app.utils.llm_client import generate_email
+    from app.utils.company import wrap_email_template
+    from app.utils.email_engine import EmailEngine
+    from app.repositories.account_repository import account_repository
+    from app.models.campaign import Campaign
+    from datetime import datetime, timezone
+
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+
+    cfg = _load_cfg(session)
+
+    # Use saved draft if available, otherwise generate fresh
+    if lead.draft_subject and lead.draft_body:
+        subject      = lead.draft_subject
+        body_html_raw = lead.draft_body
+    else:
+        if not cfg.get("groq_key") and not cfg.get("openrouter_key"):
+            raise HTTPException(400, "No LLM API key configured. Go to Settings and add your Groq or OpenRouter key.")
+        identity, services = _get_identity_and_services(session)
+        lead_data = _lead_to_dict(lead)
+        sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+        try:
+            pkg = await generate_email(
+                sys_p, usr_p,
+                groq_key=cfg.get("groq_key", ""),
+                openrouter_key=cfg.get("openrouter_key", ""),
+                preferred_provider=cfg.get("llm_provider", "groq"),
+                openrouter_model=cfg.get("openrouter_model") or None,
+            )
+        except RuntimeError as exc:
+            raise HTTPException(400, str(exc))
+        subject       = pkg["subject"]
+        body_html_raw = pkg["bodyHtml"]
+
+    # Pick first active account
+    accs = account_repository.get_active_accounts(session)
+    if not accs:
+        raise HTTPException(400, "No active email accounts configured")
+    acc = accs[0]
+
+    # Wrap in branded template
+    identity, _ = _get_identity_and_services(session)
+    html_body = wrap_email_template(
+        body_html_raw,
+        sender_email=acc.email,
+        sender_name=acc.display_name or acc.email.split("@")[0].title(),
+        sender_title=getattr(identity, "sender_title", "") or cfg.get("sender_title", "Executive"),
+        calendly_url=getattr(identity, "calendly_url", "") or cfg.get("calendar_url", ""),
+        company_name=getattr(identity, "name", "") or "",
+        company_tagline=getattr(identity, "tagline", ""),
+        company_logo=getattr(identity, "logo_url", ""),
+        company_website=getattr(identity, "website", ""),
+        offices=_offices_to_str(getattr(identity, "offices", [])),
+    )
+    plain = re.sub(r"<[^>]+>", " ", body_html_raw).strip()
+
+    engine = EmailEngine(
+        [{"id": acc.id, "email": acc.email, "app_password": acc.app_password,
+          "provider": acc.provider, "display_name": acc.display_name}],
+        strategy="round_robin",
+    )
+    results = await engine.send_batch(
+        jobs=[{"to": lead.email, "subject": subject, "html": html_body,
+               "plain": plain, "lead_id": lead_id}],
+        delay_seconds=0,
+    )
+    result = results[0]
+
+    lead.status = "sent" if result["success"] else "failed"
+    campaign = Campaign(
+        lead_id=lead_id,
+        subject=subject,
+        sent_at=datetime.now(timezone.utc).isoformat(),
+        error_message="" if result["success"] else result.get("error", ""),
+    )
+    session.add(lead)
+    session.add(campaign)
+    session.commit()
+
+    if result["success"]:
+        return {"status": "sent", "sent_from": result.get("sent_from", "")}
+    raise HTTPException(500, result.get("error", "Send failed"))
