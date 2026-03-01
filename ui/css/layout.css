@@ -1,0 +1,349 @@
+/*
+ * layout.css — Structural layout: sidebar, topbar, main area, pages, panels
+ */
+
+/* ── Reset ──────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ── SIDEBAR ────────────────────────────────────────────── */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.sidebar__logo,
+.sidebar__brand {
+  padding: 18px 18px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+}
+
+.sidebar__footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.brand-mark {
+  width: 36px; height: 36px;
+  background: var(--brand);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 14px;
+  color: #fff;
+  flex-shrink: 0;
+  overflow: hidden;
+  box-shadow: 0 2px 8px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / .32);
+}
+
+.brand-info { min-width: 0; }
+
+.brand-name,
+.sidebar__app-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-sub {
+  font-size: 10.5px;
+  color: var(--muted-2);
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+/* ── SIDEBAR NAV ─────────────────────────────────────────── */
+.sidebar__nav {
+  flex: 1;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow-y: auto;
+}
+
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 4px;
+}
+
+.nav-section__title,
+.nav-section > span:first-child {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--muted-2);
+  padding: 14px 10px 6px;
+  font-weight: 700;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  text-decoration: none;
+  text-transform: none;
+  letter-spacing: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  transition:
+    color        var(--t) var(--ease),
+    background   var(--t) var(--ease),
+    border-color var(--t) var(--ease);
+}
+
+.nav-item:hover {
+  color: var(--text);
+  background: var(--surface-2);
+}
+
+.nav-item.active {
+  color: var(--brand);
+  background: var(--brand-muted);
+  border-color: var(--brand-border);
+  font-weight: 600;
+}
+
+.nav-item svg { width: 15px; height: 15px; flex-shrink: 0; opacity: .7; }
+.nav-item.active svg { opacity: 1; }
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--brand-muted);
+  border: 1px solid var(--brand-border);
+  color: var(--brand);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 20px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ── SIDEBAR STATUS ──────────────────────────────────────── */
+.sidebar__status {
+  margin: 0 10px 14px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.status-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex-shrink: 0;
+  transition: background .4s;
+}
+
+.status-dot--online  { background: var(--success); animation: blink 2.2s infinite; }
+.status-dot--offline { background: var(--danger); animation: none; }
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .38; }
+}
+
+/* ── MAIN AREA ───────────────────────────────────────────── */
+.main,
+.main-wrap {
+  margin-left: var(--sidebar-w);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── TOPBAR ──────────────────────────────────────────────── */
+.topbar {
+  height: var(--topbar-h);
+  background: rgba(248,250,252,.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
+.topbar__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar__title,
+.topbar__page-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+}
+
+.topbar__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── CAMPAIGN RUNNING BAR ────────────────────────────────── */
+.campaign-bar {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 28px;
+  background: hsl(var(--brand-h) var(--brand-s) 96%);
+  border-bottom: 1px solid var(--brand-border);
+  font-size: 12.5px;
+  color: var(--brand);
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.campaign-bar.show { display: flex; }
+.campaign-bar .spinner { border: 2px solid var(--brand-muted); border-top-color: var(--brand); }
+
+/* ── ONBOARDING BANNER ───────────────────────────────────── */
+.onboarding-banner {
+  margin: 18px 28px 0;
+  padding: 12px 18px;
+  background: hsl(var(--brand-h) var(--brand-s) 96%);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ── SCROLL AREA ─────────────────────────────────────────── */
+.scroll-area,
+.page-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── PAGE SYSTEM ─────────────────────────────────────────── */
+.page { display: none; }
+
+.page.active {
+  display: block;
+  animation: pageIn var(--t-slow) var(--ease-out);
+}
+
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.content {
+  padding: 26px 28px;
+  max-width: 1520px;
+}
+
+/* Pages get their own padding instead of needing a .content wrapper */
+.page.active { padding: 26px 28px; }
+
+/* ── GRID SYSTEM ─────────────────────────────────────────── */
+.grid         { display: grid; gap: 18px; }
+.grid--2      { grid-template-columns: 1fr 1fr; }
+.grid--3      { grid-template-columns: repeat(3, 1fr); }
+.grid--4      { grid-template-columns: repeat(4, 1fr); }
+.grid--wide   { grid-template-columns: 1.45fr 1fr; }
+.grid--sidebar{ grid-template-columns: 360px 1fr; }
+.grid--sidebar-sm { grid-template-columns: 320px 1fr; }
+.grid--auto   { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+
+/* ── PANEL ───────────────────────────────────────────────── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+}
+
+.panel__header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text);
+}
+
+.panel__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.panel__body         { padding: 20px; }
+.panel__body--flush  { padding: 0; }
+.panel__body--tight  { padding: 14px 20px; }
+
+/* ── SCROLL BARS ─────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--surface-3); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }

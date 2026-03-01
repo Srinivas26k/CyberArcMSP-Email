@@ -51,7 +51,11 @@ app = FastAPI(title="CA MSP AI Outreach", version="2.1.1", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8002", "http://localhost:8002"],
+    allow_origins=[
+        "http://127.0.0.1:8008", "http://localhost:8008",
+        "http://127.0.0.1:8002", "http://localhost:8002",
+        "http://localhost:5173",  "http://127.0.0.1:5173",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -91,9 +95,9 @@ _here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _UI_DIR = os.path.join(_here, "ui")
 
 if os.path.isdir(_UI_DIR):
-    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="ui")
+    app.mount("/", StaticFiles(directory=_UI_DIR, html=True), name="frontend")
 else:
-    logger.warning("UI directory not found — frontend will not be served.")
+    logger.warning("ui/ directory not found — frontend will not be served.")
 
 if __name__ == "__main__":
     import uvicorn
