@@ -89,23 +89,26 @@ async def apollo_search(
         "X-Api-Key": api_key,
     }
 
-    # Employee ranges — same defaults as Code.gs
-    default_employee_ranges = ["11,50", "51,200", "201,500", "501,1000"]
+    # Employee ranges — always 100+ minimum
+    default_employee_ranges = ["101,250", "251,500", "501,1000", "1001,5000", "5001,1000000"]
     employee_ranges = company_sizes if company_sizes else default_employee_ranges
 
     collected: list[dict] = []
     seen_emails: set[str] = set()
+    credits_used: int = 0
     page = 1
 
     async with httpx.AsyncClient(timeout=35) as client:
         while len(collected) < target_count and page <= 20:
-            needed   = target_count - len(collected)
-            per_page = min(needed + 3, ENRICH_BATCH_SIZE)   # small buffer like Code.gs
+            needed = target_count - len(collected)
+            # Search is FREE — fetch a generous pool so we can filter smartly.
+            # Apollo's has_email flag tells us who has an email without spending credits.
+            search_per_page = min(max(needed * 8, 25), 100)
 
             # ── STEP 1: Search (FREE) ─────────────────────────────────────────
             search_payload: dict = {
                 "page":        page,
-                "per_page":    per_page,
+                "per_page":    search_per_page,
                 "person_titles": titles,
                 "person_seniorities": ["c_suite", "vp", "director", "manager", "owner", "founder"],
                 "organization_num_employees_ranges": employee_ranges,
@@ -142,7 +145,20 @@ async def apollo_search(
                 logger.info(f"Apollo returned 0 people on page {page} — stopping")
                 break
 
-            person_ids = [p["id"] for p in people if p.get("id")]
+            # Filter to people Apollo already knows have emails — FREE.
+            # has_email is a boolean in the Apollo response; fall back to all
+            # people if the field is absent (older API keys may omit it).
+            people_with_email = [p for p in people if p.get("id") and p.get("has_email") is not False]
+            if not people_with_email:
+                # has_email absent for all — use everyone but still cap tightly
+                people_with_email = [p for p in people if p.get("id")]
+            logger.info(f"Page {page}: {len(people)} results, {len(people_with_email)} candidates for enrichment")
+
+            # Enrich exactly what we still need — the outer while-loop retries
+            # if enrichment misses (no email returned).  This minimises credits:
+            # worst case = target_count + number_of_miss_retries.
+            to_enrich = people_with_email[:needed]
+            person_ids = [p["id"] for p in to_enrich]
             if not person_ids:
                 page += 1
                 continue
@@ -176,6 +192,7 @@ async def apollo_search(
                     continue
 
                 matches = er.json().get("matches", [])
+                credits_used += len(batch)   # Apollo charges 1 credit per ID sent
                 logger.info(f"Enrich returned {len(matches)} matches for {len(batch)} IDs")
 
                 for p in matches:
@@ -190,24 +207,50 @@ async def apollo_search(
                         logger.debug(f"Duplicate: {email}")
                         continue
 
-                    org = p.get("organization") or {}
-                    loc = ", ".join(filter(None, [p.get("city"), p.get("state"), p.get("country")]))
-                    emp = f"~{org['estimated_num_employees']}" if org.get("estimated_num_employees") else ""
+                    org  = p.get("organization") or {}
+                    loc  = ", ".join(filter(None, [p.get("city"), p.get("state"), p.get("country")]))
+                    emp  = str(org.get("estimated_num_employees", "")) if org.get("estimated_num_employees") else ""
+
+                    # Funding info
+                    funding_events = org.get("funding_events") or []
+                    latest_funding = ""
+                    if funding_events:
+                        fe = funding_events[0]
+                        amt = fe.get("amount")
+                        rnd = fe.get("series") or fe.get("round_name", "")
+                        latest_funding = f"{rnd} ${amt:,}" if amt else rnd
+
+                    # Tech stack
+                    tech_stack = ", ".join((org.get("technology_names") or [])[:10])
 
                     seen_emails.add(email.lower())
                     collected.append({
-                        "email":      email,
-                        "first_name": p.get("first_name", ""),
-                        "last_name":  p.get("last_name", ""),
-                        "company":    org.get("name", ""),
-                        "role":       p.get("title", titles[0] if titles else ""),
-                        "website":    org.get("website_url", ""),
-                        "linkedin":   p.get("linkedin_url", ""),
-                        "location":   loc,
-                        "seniority":  p.get("seniority", ""),
-                        "employees":  emp,
-                        "industry":   _detect_industry(p, industry),
-                        "status":     "pending",
+                        # Core
+                        "email":            email,
+                        "first_name":       p.get("first_name") or "",
+                        "last_name":        p.get("last_name") or "",
+                        "role":             p.get("title") or (titles[0] if titles else ""),
+                        "seniority":        p.get("seniority") or "",
+                        "headline":         p.get("headline") or "",
+                        "location":         loc,
+                        "linkedin":         p.get("linkedin_url") or "",
+                        "twitter":          p.get("twitter_url") or "",
+                        "phone":            p.get("phone") or "",
+                        "departments":      ", ".join(p.get("departments") or []),
+                        # Company
+                        "company":          org.get("name") or "",
+                        "website":          org.get("website_url") or "",
+                        "employees":        emp,
+                        "industry":         _detect_industry(p, industry),
+                        "org_industry":     org.get("industry") or "",
+                        "org_founded":      str(org.get("founded_year")) if org.get("founded_year") else "",
+                        "org_description":  org.get("short_description") or "",
+                        "org_linkedin":     org.get("linkedin_url") or "",
+                        "org_twitter":      org.get("twitter_url") or "",
+                        "org_funding":      latest_funding,
+                        "org_tech_stack":   tech_stack,
+                        # Meta
+                        "status":           "pending",
                     })
                     logger.info(f"✅ Added: {email} | {org.get('name', '?')}")
 
@@ -216,5 +259,5 @@ async def apollo_search(
             page += 1
             await asyncio.sleep(0.8)
 
-    logger.info(f"Apollo search complete: {len(collected)} leads collected")
-    return collected
+    logger.info(f"Apollo search complete: {len(collected)} leads collected, {credits_used} credits used")
+    return collected, credits_used

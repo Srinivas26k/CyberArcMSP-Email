@@ -21,22 +21,37 @@ class LeadService:
 
             lead_in = Lead(
                 email=email,
-                first_name=norm.get("first_name", ""),
-                last_name=norm.get("last_name", ""),
-                company=norm.get("company", ""),
-                role=norm.get("role", ""),
-                industry=norm.get("industry", "Technology"),
-                location=norm.get("location", ""),
-                seniority=norm.get("seniority", ""),
-                employees=norm.get("employees", ""),
-                website=norm.get("website", ""),
-                linkedin=norm.get("linkedin", "")
+                first_name=norm.get("first_name") or "",
+                last_name=norm.get("last_name") or "",
+                company=norm.get("company") or "",
+                role=norm.get("role") or "",
+                industry=norm.get("industry") or "Technology",
+                location=norm.get("location") or "",
+                seniority=norm.get("seniority") or "",
+                employees=norm.get("employees") or "",
+                website=norm.get("website") or "",
+                linkedin=norm.get("linkedin") or "",
+                headline=norm.get("headline") or "",
+                twitter=norm.get("twitter") or "",
+                phone=norm.get("phone") or "",
+                departments=norm.get("departments") or "",
+                org_industry=norm.get("org_industry") or "",
+                org_founded=norm.get("org_founded") or "",
+                org_description=norm.get("org_description") or "",
+                org_funding=norm.get("org_funding") or "",
+                org_tech_stack=norm.get("org_tech_stack") or "",
             )
             lead_repository.create(session, lead_in)
             existing_emails.add(email)
             added += 1
 
-        return {"added": added, "skipped": skipped, "total": len(lead_repository.get_all(session))}
+        return {
+            "added":   added,
+            "skipped": skipped,
+            "found":   len(leads_data),
+            "total":   len(lead_repository.get_all(session)),
+            "leads":   leads_data,          # full objects for the results panel
+        }
 
     @staticmethod
     def process_csv_upload(session: Session, content: bytes) -> dict:

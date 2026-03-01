@@ -8,6 +8,22 @@ from app.utils.email_engine import EmailEngine
 
 router = APIRouter()
 
+
+@router.get("/detect-provider")
+def detect_provider(email: str):
+    """Heuristic provider detection from email domain (instant, no SMTP probe)."""
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Invalid email address")
+    domain = email.split("@")[1].lower()
+    if domain in ("gmail.com", "googlemail.com"):
+        return {"provider": "gmail",   "label": "Gmail",                       "description": "Uses smtp.gmail.com:587"}
+    elif domain in ("outlook.com", "hotmail.com", "live.com", "msn.com"):
+        return {"provider": "outlook", "label": "Outlook Personal",            "description": "Uses smtp-mail.outlook.com:587"}
+    elif domain.endswith(".onmicrosoft.com"):
+        return {"provider": "m365",    "label": "Microsoft 365 Business",      "description": "Uses smtp.office365.com:587"}
+    else:
+        return {"provider": "m365",    "label": "Microsoft 365 (custom domain)", "description": "Custom domain — try M365 first; use Outlook if it fails"}
+
 @router.get("/")
 def list_accounts(session: Session = Depends(get_db_session)):
     accs = account_repository.get_all(session)

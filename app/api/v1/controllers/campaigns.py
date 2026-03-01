@@ -51,18 +51,36 @@ async def start_campaign(req: CampaignRequest, session: Session = Depends(get_db
         
     session.commit()
 
-    # Pass the current dictionary form of the settings so service doesn't query it inside thread
+    # Read LLM providers from DB (not env vars — user configures them in Settings UI)
+    import json as _json
+    _SENSITIVE = {"groq_key", "openrouter_key", "apollo_key", "llm_providers"}
+    _raw_cfg: dict = {}
+    for _row in session.exec(select(Setting)).all():
+        _raw_cfg[_row.key] = _row.get_decrypted_value() if _row.key in _SENSITIVE else _row.value
+
+    _raw_providers = _raw_cfg.pop("llm_providers", "") or ""
+    if _raw_providers:
+        try:
+            _providers = _json.loads(_raw_providers)
+        except Exception:
+            _providers = []
+    else:
+        # Backward compat: build from legacy individual keys
+        _providers = []
+        if _raw_cfg.get("groq_key"):
+            _providers.append({"provider": "groq", "api_key": _raw_cfg["groq_key"], "model": ""})
+        if _raw_cfg.get("openrouter_key"):
+            _providers.append({"provider": "openrouter", "api_key": _raw_cfg["openrouter_key"],
+                                "model": _raw_cfg.get("openrouter_model", "")})
+
     runtime_cfg = {
         "send_strategy": req.strategy,
-        "batch_size": str(req.batch_size),
-        "groq_key": settings.groq_api_key,
-        "openrouter_key": settings.openrouter_api_key,
-        "apollo_key": settings.apollo_api_key,
-        "calendar_url": settings.calendly_url,
-        "sender_name": settings.sender_name,
-        "sender_title": settings.sender_title,
-        "llm_provider": settings.llm_provider,
-        "openrouter_model": settings.openrouter_model
+        "batch_size":    str(req.batch_size),
+        "providers":     _providers,
+        "apollo_key":    _raw_cfg.get("apollo_key", settings.apollo_api_key or ""),
+        "calendar_url":  _raw_cfg.get("calendar_url", settings.calendly_url or ""),
+        "sender_name":   _raw_cfg.get("sender_name",  settings.sender_name  or ""),
+        "sender_title":  _raw_cfg.get("sender_title", settings.sender_title or ""),
     }
 
     campaign_state.set_running(True)

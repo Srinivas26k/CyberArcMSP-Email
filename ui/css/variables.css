@@ -1,0 +1,76 @@
+/*
+ * variables.css — Design tokens for SRV AI Outreach
+ *
+ * Override --brand-h / --brand-s / --brand-l at runtime (via JS from the
+ * identity profile's primary_color field) to white-label the accent colour
+ * without touching any other CSS.
+ */
+
+:root {
+  /* ── Brand (tweaked at runtime from identity profile) ─── */
+  --brand-h: 221;
+  --brand-s: 83%;
+  --brand-l: 53%;
+  --brand:        hsl(var(--brand-h) var(--brand-s) var(--brand-l));
+  --brand-dark:   hsl(var(--brand-h) var(--brand-s) 41%);
+  --brand-muted:  hsl(var(--brand-h) var(--brand-s) var(--brand-l) / .11);
+  --brand-border: hsl(var(--brand-h) var(--brand-s) var(--brand-l) / .24);
+  --brand-glow:   0 0 0 3px hsl(var(--brand-h) var(--brand-s) var(--brand-l) / .14);
+
+  /* ── Surface ─────────────────────────────────────────── */
+  --bg:        #F8FAFC;
+  --surface:   #FFFFFF;
+  --surface-2: #F1F5F9;
+  --surface-3: #E2E8F0;
+
+  /* ── Text ────────────────────────────────────────────── */
+  --text:   #0F172A;
+  --text-2: #334155;
+  --muted:  #64748B;
+  --muted-2:#94A3B8;
+
+  /* ── Semantic colours ────────────────────────────────── */
+  --success:        #10B981;
+  --success-bg:     rgba(16,185,129,.10);
+  --success-border: rgba(16,185,129,.22);
+
+  --warning:        #F59E0B;
+  --warning-bg:     rgba(245,158,11,.10);
+  --warning-border: rgba(245,158,11,.22);
+
+  --danger:         #EF4444;
+  --danger-bg:      rgba(239,68,68,.10);
+  --danger-border:  rgba(239,68,68,.22);
+
+  /* ── Border ──────────────────────────────────────────── */
+  --border:   rgba(0,0,0,.07);
+  --border-2: rgba(0,0,0,.13);
+
+  /* ── Shadow ──────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0,0,0,.05);
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.03);
+  --shadow-lg: 0 12px 32px rgba(0,0,0,.09), 0 4px 8px rgba(0,0,0,.03);
+
+  /* ── Layout ──────────────────────────────────────────── */
+  --sidebar-w: 232px;
+  --topbar-h:  60px;
+
+  /* ── Border-radius ───────────────────────────────────── */
+  --r-xs: 5px;
+  --r-sm: 7px;
+  --r:    11px;
+  --r-lg: 15px;
+  --r-xl: 22px;
+
+  /* ── Typography ──────────────────────────────────────── */
+  --font:         'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Syne', 'DM Sans', system-ui, sans-serif;
+  --font-mono:    'JetBrains Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+
+  /* ── Motion ──────────────────────────────────────────── */
+  --ease:     cubic-bezier(.25,.1,.25,1);
+  --ease-out: cubic-bezier(0,0,.4,1);
+  --t:        140ms;
+  --t-slow:   260ms;
+}
