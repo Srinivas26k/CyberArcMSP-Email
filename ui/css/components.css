@@ -256,6 +256,10 @@ tr.row--selected:hover td { background: rgba(99,102,241,.13); }
   padding: 20px 22px;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100px;
   box-shadow: var(--shadow-xs);
   transition: box-shadow var(--t) var(--ease), border-color var(--t) var(--ease);
 }
