@@ -39,24 +39,13 @@
         "from": ".",
         "to": "app",
         "filter": [
-          "*.py",
+          "main.py",
           "pyproject.toml",
           "uv.lock",
-          ".venv/**",
-          "!.venv/**/__pycache__/**",
-          "!.venv/**/*.pyc",
-          "!.venv/**/*.pyo",
-          "!.venv/**/tests/**",
-          "!.venv/**/test/**",
-          "!.venv/**/*.dist-info/RECORD",
-          "company.py",
-          "prompt.py",
-          "models.py",
-          "database.py",
-          "email_engine.py",
-          "llm_client.py",
-          "apollo_search.py",
-          "server.py",
+          "app/**",
+          "!app/**/__pycache__/**",
+          "!app/**/*.pyc",
+          "!app/**/*.pyo",
           "!database.db",
           "!.env"
         ]
@@ -66,16 +55,6 @@
         "to": "app/ui",
         "filter": [
           "**/*"
-        ]
-      },
-      {
-        "from": "bundled-python",
-        "to": "app/bundled-python",
-        "filter": [
-          "**",
-          "!**/__pycache__/**",
-          "!**/*.pyc",
-          "!**/*.pyo"
         ]
       }
     ],

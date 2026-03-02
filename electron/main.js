@@ -116,13 +116,22 @@ function startServer() {
 
   let cmd, args;
 
-  if (isPackaged) {
+  // Always extend PATH so uv can be found on Linux/macOS
+  if (process.platform !== 'win32') {
+    const home = process.env.HOME || '';
+    env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
+  }
+
+  const isLinuxOrMac = process.platform === 'linux' || process.platform === 'darwin';
+
+  if (isPackaged && !isLinuxOrMac) {
+    // Windows packaged — use the bundled Python executable
     const pythonExe = resolvePythonExe(projectDir);
     if (!pythonExe) {
       dialog.showErrorBox(
         'Python Not Found',
         `The bundled Python interpreter could not be located.\n\n` +
-        `Looked inside: ${path.join(projectDir, 'bundled-python')} (preferred)\n` +
+        `Looked inside: ${path.join(projectDir, 'bundled-python')}\n` +
         `         and: ${path.join(projectDir, '.venv')}\n\n` +
         `Please re-download the latest installer. If the problem persists contact support.`
       );
@@ -137,11 +146,7 @@ function startServer() {
       '--log-level', 'warning',
     ];
   } else {
-    // Dev mode — uv is expected to be installed
-    if (process.platform !== 'win32') {
-      const home = process.env.HOME || '';
-      env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
-    }
+    // Dev mode OR packaged Linux/macOS — use uv (manages Python + deps automatically)
     cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
     args = [
       'run', 'uvicorn', 'main:app',
@@ -168,10 +173,11 @@ function startServer() {
       'Server Start Failed',
       `Could not start the Python background server.\n\n` +
       `Error: ${err.message}\n` +
-      `Python: ${cmd}\n` +
+      `Runner: ${cmd}\n` +
       `Working dir: ${projectDir}\n\n` +
-      `This usually means the .venv was not bundled correctly. ` +
-      `Please re-download the latest installer.`
+      `On Linux/macOS make sure 'uv' is installed:\n` +
+      `  curl -LsSf https://astral.sh/uv/install.sh | sh\n\n` +
+      `Then restart the app.`
     );
   });
 
