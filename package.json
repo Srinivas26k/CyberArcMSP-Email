@@ -45,6 +45,10 @@
           "!app/**/__pycache__/**",
           "!app/**/*.pyc",
           "!app/**/*.pyo",
+          "!app/**/*.db",
+          "!app/**/.vault_key",
+          "!app/**/.vault_salt",
+          "!app/**/data/**",
           "!database.db",
           "!.env"
         ]
