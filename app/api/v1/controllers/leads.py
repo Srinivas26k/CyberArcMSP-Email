@@ -289,7 +289,7 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     plain = re.sub(r"<[^>]+>", " ", body_html_raw).strip()
 
     engine = EmailEngine(
-        [{"id": acc.id, "email": acc.email, "app_password": acc.app_password,
+        [{"id": acc.id, "email": acc.email, "app_password": acc.get_decrypted_password(),
           "provider": acc.provider, "display_name": acc.display_name}],
         strategy="round_robin",
     )

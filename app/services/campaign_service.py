@@ -52,7 +52,7 @@ class CampaignService:
                     accs = [a for a in accs if a.id in account_ids]
                     
                 email_engine = EmailEngine(
-                    [{"id": a.id, "email": a.email, "app_password": a.app_password,
+                    [{"id": a.id, "email": a.email, "app_password": a.get_decrypted_password(),
                       "provider": a.provider, "display_name": a.display_name} for a in accs],
                     strategy=cfg.get("send_strategy", "round_robin"),
                     batch_size=int(cfg.get("batch_size", 5)),

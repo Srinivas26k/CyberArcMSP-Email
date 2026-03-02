@@ -5,6 +5,7 @@ from app.models.email_account import EmailAccount
 from app.schemas.account import AccountIn
 from app.repositories.account_repository import account_repository
 from app.utils.email_engine import EmailEngine
+from app.core.vault import VaultManager
 
 router = APIRouter()
 
@@ -43,7 +44,7 @@ def list_accounts(session: Session = Depends(get_db_session)):
 def add_account(body: AccountIn, session: Session = Depends(get_db_session)):
     acc = EmailAccount(
         email=body.email.strip().lower(),
-        app_password=body.app_password.strip(),
+        app_password=VaultManager.encrypt(body.app_password.strip()),
         provider=body.provider.strip().lower(),
         display_name=body.display_name.strip()
     )
@@ -67,7 +68,7 @@ async def test_account_connection(account_id: int, session: Session = Depends(ge
     engine = EmailEngine([{
         "id": acc.id,
         "email": acc.email,
-        "app_password": acc.app_password,
+        "app_password": acc.get_decrypted_password(),
         "provider": acc.provider,
         "display_name": acc.display_name
     }])
