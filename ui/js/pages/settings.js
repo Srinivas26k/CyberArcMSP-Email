@@ -79,7 +79,8 @@ async function loadSettings() {
     renderSlots();
 
     if (s.apollo_key) setVal('st-apollo-key', s.apollo_key);
-    if (s.batch_size) setVal('st-daily-limit', s.batch_size);
+    if (s.daily_limit != null) setVal('st-daily-limit', s.daily_limit);
+    else if (s.batch_size) setVal('st-daily-limit', s.batch_size); // backward compat
   } catch (e) {
     toast('Could not load settings: ' + e.message, 'error');
   }
@@ -308,8 +309,8 @@ async function saveSettings() {
 
   const apollo = getVal('st-apollo-key');
   const limit  = getVal('st-daily-limit');
-  if (apollo) body.apollo_key = apollo;
-  if (limit)  body.batch_size = parseInt(limit);
+  if (apollo) body.apollo_key  = apollo;
+  if (limit)  body.daily_limit = parseInt(limit);
 
   try {
     await settingsAPI.update(body);
