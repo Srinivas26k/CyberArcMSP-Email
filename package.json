@@ -50,7 +50,9 @@
           "!app/**/.vault_salt",
           "!app/**/data/**",
           "!database.db",
-          "!.env"
+          "!.env",
+          "srvdb/**",
+          "!srvdb/**/__pycache__/**"
         ]
       },
       {

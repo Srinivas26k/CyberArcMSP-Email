@@ -148,13 +148,13 @@ function startServer() {
     env.UV_PYTHON_DIR = path.join(USER_DATA_DIR, 'python-runtime');
     // Use managed Python — uv downloads it on first run
     env.UV_PYTHON_DOWNLOADS = 'automatic';
-    // Ensure Python can always find main.py and the app/ package from projectDir
+    // Ensure Python adds projectDir to sys.path: use -m so '' (cwd) is prepended
     env.PYTHONPATH = projectDir;
 
     cmd  = uvBin;
     args = [
       'run', '--no-dev',
-      'uvicorn', 'main:app',
+      'python', '-m', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
       '--port', String(SERVER_PORT),
       '--log-level', 'warning',
@@ -170,7 +170,8 @@ function startServer() {
     env.PYTHONPATH = projectDir;
     cmd  = isWin ? 'uv.exe' : 'uv';
     args = [
-      'run', 'uvicorn', 'main:app',
+      'run',
+      'python', '-m', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
       '--port', String(SERVER_PORT),
       '--log-level', 'warning',
