@@ -74,6 +74,9 @@ export const leadsAPI = {
   preview:   (id)         => post(`/api/leads/${id}/preview`),
   saveDraft: (id, data)   => patch(`/api/leads/${id}/draft`, data),
   sendOne:   (id)         => post(`/api/leads/${id}/send`),
+  // Lead detail
+  timeline:  (id)         => get(`/api/leads/${id}/timeline`),
+  retry:     (id)         => post(`/api/leads/${id}/retry`),
 };
 
 export const accountsAPI = {

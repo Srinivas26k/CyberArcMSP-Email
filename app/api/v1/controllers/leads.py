@@ -111,10 +111,24 @@ def _offices_to_str(offices) -> str:
 
 @router.get("/")
 def list_leads(session: Session = Depends(get_db_session)):
+    from sqlmodel import desc
     leads = lead_repository.get_all(session)
-    # Simple mapping without join for now
-    res = [_lead_to_dict(lead) for lead in leads]
-    return {"leads": res, "total": len(leads)}
+    # Fetch latest error + sent_at per lead from campaigns table
+    all_campaigns = session.exec(select(Campaign).order_by(desc(Campaign.id))).all()
+    error_map: dict = {}  # lead_id -> last error_message
+    sent_map:  dict = {}  # lead_id -> last sent_at
+    for c in all_campaigns:
+        if c.lead_id not in error_map:
+            error_map[c.lead_id] = c.error_message or ""
+        if c.lead_id not in sent_map:
+            sent_map[c.lead_id] = c.sent_at or ""
+    res = []
+    for lead in leads:
+        d = _lead_to_dict(lead)
+        d["last_error"] = error_map.get(lead.id, "")
+        d["last_sent_at"] = sent_map.get(lead.id, "")
+        res.append(d)
+    return {"leads": res, "total": len(res)}
 
 @router.post("/", status_code=201)
 def add_lead(body: LeadIn, session: Session = Depends(get_db_session)):
@@ -228,6 +242,48 @@ def save_lead_draft(lead_id: int, body: dict, session: Session = Depends(get_db_
     session.add(lead)
     session.commit()
     return {"status": "saved"}
+
+
+@router.get("/{lead_id}/timeline")
+def get_lead_timeline(lead_id: int, session: Session = Depends(get_db_session)):
+    """Return full lead profile + complete email send history for the lead."""
+    from sqlmodel import desc
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    campaigns = session.exec(
+        select(Campaign).where(Campaign.lead_id == lead_id).order_by(Campaign.id)
+    ).all()
+    history = [{
+        "id":            c.id,
+        "subject":       c.subject or "",
+        "sent_at":       c.sent_at or "",
+        "error_message": c.error_message or "",
+        "tracking_id":   c.tracking_id or "",
+        "opened_at":     c.opened_at or "",
+        "open_count":    c.open_count or 0,
+        "sequence_step": c.sequence_step or 0,
+        "account_id":    c.account_id,
+        "thread_id":     c.thread_id or "",
+    } for c in campaigns]
+    lead_dict = _lead_to_dict(lead)
+    lead_dict["last_error"] = history[-1]["error_message"] if history else ""
+    lead_dict["last_sent_at"] = history[-1]["sent_at"] if history else ""
+    return {"lead": lead_dict, "history": history}
+
+
+@router.post("/{lead_id}/retry")
+def retry_failed_lead(lead_id: int, session: Session = Depends(get_db_session)):
+    """Reset a failed (or any) lead back to 'pending' so it can be re-sent."""
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    lead.status        = "pending"
+    lead.draft_subject = ""
+    lead.draft_body    = ""
+    session.add(lead)
+    session.commit()
+    return {"status": "reset", "lead": _lead_to_dict(lead)}
 
 
 @router.post("/{lead_id}/send")
