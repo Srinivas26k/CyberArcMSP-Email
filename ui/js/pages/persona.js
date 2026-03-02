@@ -35,7 +35,39 @@ function _applyPreviewSample(tpl) {
   return tpl.replace(/\{\{([A-Z_]+)\}\}/g, (_, key) => PREVIEW_SAMPLE[key] ?? '');
 }
 
+// ── Tab management ─────────────────────────────────────────────────────────────────────
+let _activePersonaTab = 'company';
+
+function switchPersonaTab(tabId) {
+  _activePersonaTab = tabId;
+  // Show/hide tab panels
+  document.querySelectorAll('.page-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById(`ptab-${tabId}`)?.classList.add('active');
+  // Highlight in-page tab buttons
+  document.querySelectorAll('.page-tab[data-persona-tab]').forEach(b =>
+    b.classList.toggle('active', b.dataset.personaTab === tabId));
+  // Highlight sidebar sub-items
+  document.querySelectorAll('.nav-subitem[data-persona-tab]').forEach(b =>
+    b.classList.toggle('active', b.dataset.personaTab === tabId));
+}
+
+/** Called from router or sidebar sub-items to navigate directly to a tab. */
+window.setPersonaTab = switchPersonaTab;
+
 export function init(register) {
+  // ── Wire in-page pill tabs ─────────────────────────────────────────
+  document.querySelectorAll('.page-tab[data-persona-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchPersonaTab(btn.dataset.personaTab));
+  });
+
+  // ── Wire sidebar sub-items ─────────────────────────────────────────
+  document.querySelectorAll('.nav-subitem[data-persona-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (location.hash.replace('#', '') !== 'persona') location.hash = 'persona';
+      switchPersonaTab(btn.dataset.personaTab);
+    });
+  });
+
   document.getElementById('add-pillar-btn')?.addEventListener('click', () => addPillar());
   document.getElementById('save-persona-btn')?.addEventListener('click', savePersona);
 
@@ -75,8 +107,22 @@ export function init(register) {
   });
 
   register('persona', {
-    onEnter: loadPersona,
-    onLeave: () => {},
+    onEnter: () => {
+      // Expand sidebar sub-nav + rotate chevron
+      document.getElementById('persona-subnav')?.classList.add('open');
+      const icon = document.getElementById('persona-expand-icon');
+      if (icon) icon.style.transform = 'rotate(180deg)';
+      // Restore active tab (defaults to 'company' on first visit)
+      switchPersonaTab(_activePersonaTab);
+      loadPersona();
+    },
+    onLeave: () => {
+      document.getElementById('persona-subnav')?.classList.remove('open');
+      const icon = document.getElementById('persona-expand-icon');
+      if (icon) icon.style.transform = '';
+      // Clear sidebar sub-item highlights
+      document.querySelectorAll('.nav-subitem[data-persona-tab]').forEach(b => b.classList.remove('active'));
+    },
   });
 }
 

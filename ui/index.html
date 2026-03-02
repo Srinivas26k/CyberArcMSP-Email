@@ -80,7 +80,14 @@
       <button class="nav-item" data-page="persona">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
         <span>AI Identity</span>
+        <svg id="persona-expand-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:11px;height:11px;margin-left:auto;opacity:.45;transition:transform .25s;flex-shrink:0;"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
       </button>
+      <div class="nav-subnav" id="persona-subnav">
+        <button class="nav-subitem" data-persona-tab="company">🏢 Company Profile</button>
+        <button class="nav-subitem" data-persona-tab="style">✍️ Writing Style</button>
+        <button class="nav-subitem" data-persona-tab="kb">🧠 Knowledge Base</button>
+        <button class="nav-subitem" data-persona-tab="template">📧 Email Template</button>
+      </div>
       <button class="nav-item" data-page="records">
         <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/><path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/><path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/></svg>
         <span>Records</span>
@@ -474,11 +481,28 @@
     <!-- AI IDENTITY -->
     <div id="page-persona" class="page">
       <div class="section-header">
-        <div><h1 class="section-header__title">AI Identity</h1><p class="section-header__sub">Your brand profile, writing style, and knowledge base for AI-personalised emails</p></div>
-        <button class="btn" id="save-persona-btn">Save Identity &amp; Embed KnowledgeBase</button>
+        <div><h1 class="section-header__title">AI Identity</h1><p class="section-header__sub">Powers every AI-written email — your brand, voice, knowledge &amp; template in one place</p></div>
+        <button class="btn" id="save-persona-btn">💾 Save All Changes</button>
       </div>
 
-      <!-- ROW 1: Company Profile + Branding -->
+      <!-- Pill tab bar -->
+      <div class="page-tabs" role="tablist">
+        <button class="page-tab active" data-persona-tab="company" role="tab">🏢 Company Profile</button>
+        <button class="page-tab" data-persona-tab="style" role="tab">✍️ Writing Style</button>
+        <button class="page-tab" data-persona-tab="kb" role="tab">🧠 Knowledge Base</button>
+        <button class="page-tab" data-persona-tab="template" role="tab">📧 Email Template</button>
+      </div>
+
+      <!-- ───────────────────────────────────────────────────────── -->
+      <!-- TAB 1: Company Profile                                     -->
+      <!-- ───────────────────────────────────────────────────────── -->
+      <div class="page-tab-panel active" id="ptab-company">
+        <div class="info-box info-box--brand" style="margin-bottom:16px;">
+          <strong>🏢 This is who you are.</strong> Fill in your company name, sender details, branding colour, and booking link.
+          The AI uses this information to sign every email, personalise footers, and build credibility with prospects.
+          <em>Complete this first — every other section builds on it.</em>
+        </div>
+      <!-- Company Profile + Branding -->
       <div class="grid grid--2">
         <div class="panel">
           <div class="panel__header"><span>Company Profile</span></div>
@@ -505,9 +529,19 @@
           </div>
         </div>
       </div>
+      </div><!-- /ptab-company -->
 
-      <!-- ROW 2: Email Writing Style (NEW) -->
-      <div class="panel" style="margin-top:16px;">
+      <!-- ───────────────────────────────────────────────────────── -->
+      <!-- TAB 2: Writing Style                                       -->
+      <!-- ───────────────────────────────────────────────────────── -->
+      <div class="page-tab-panel" id="ptab-style">
+        <div class="info-box info-box--brand" style="margin-bottom:16px;">
+          <strong>✍️ Control how the AI writes — not what it writes.</strong>
+          Define the voice, tone, and format — like briefing a professional copywriter.
+          The core personalisation and anti-spam logic always runs on top automatically.
+          Leave both fields blank to use the default executive B2B tone.
+        </div>
+      <div class="panel" style="margin-top:0;">
         <div class="panel__header">
           <span>✍️ Email Writing Style</span>
           <span style="font-size:11px;color:var(--muted);font-weight:400;">The AI structure stays protected — you control the voice &amp; tone</span>
@@ -552,18 +586,40 @@
           </div>
         </div>
       </div>
+        <div class="info-box" style="margin-top:12px;">💡 <strong>Pro tip:</strong> Paste an email <em>you personally wrote</em> — not a template. The AI picks up your natural rhythm and replicates it across every email it generates.</div>
+      </div><!-- /ptab-style -->
 
-      <!-- ROW 3: AI Knowledge Base -->
-      <div class="panel" style="margin-top:16px;">
+      <!-- ───────────────────────────────────────────────────────── -->
+      <!-- TAB 3: Knowledge Base                                      -->
+      <!-- ───────────────────────────────────────────────────────── -->
+      <div class="page-tab-panel" id="ptab-kb">
+        <div class="info-box info-box--brand" style="margin-bottom:16px;">
+          <strong>🧠 Teach the AI your business.</strong>
+          Each pillar represents one service, product, or capability you offer.
+          The AI picks the most relevant pillar for each prospect and weaves it naturally into the email body.
+          <em>Add at least 2–3 pillars for best personalisation results.</em>
+        </div>
+      <div class="panel" style="margin-top:0;">
         <div class="panel__header"><span>AI Knowledge Base</span><button class="btn btn--ghost btn--sm" id="add-pillar-btn">+ Add Pillar</button></div>
         <div class="panel__body">
           <p class="info-box info-box--brand" style="margin-bottom:16px;">Each pillar teaches the AI one service or capability. It uses these to write highly personalised, relevant cold emails.</p>
           <div id="pillars-container" style="display:flex;flex-direction:column;gap:12px;"></div>
         </div>
       </div>
+        <div class="info-box" style="margin-top:12px;">💡 <strong>Pro tip:</strong> Write value propositions from the <em>prospect's</em> perspective — not yours. Instead of "We offer cloud migration" → "Eliminate downtime risk and cut infrastructure costs by 40% with a fully managed migration."</div>
+      </div><!-- /ptab-kb -->
 
-      <!-- ROW 4: Email Template (HTML wrapper — optional, advanced) -->
-      <div class="panel" style="margin-top:16px;">
+      <!-- ───────────────────────────────────────────────────────── -->
+      <!-- TAB 4: Email Template                                      -->
+      <!-- ───────────────────────────────────────────────────────── -->
+      <div class="page-tab-panel" id="ptab-template">
+        <div class="info-box info-box--brand" style="margin-bottom:16px;">
+          <strong>📧 Custom HTML Email Template</strong> — Advanced &amp; optional.
+          Replace the built-in branded footer/wrapper with your own HTML design.
+          Every email sent will use this as the outer wrapper around the AI-generated body.
+          Leave blank to keep the default polished layout with your logo, colours, and signature.
+        </div>
+      <div class="panel" style="margin-top:0;">
         <div class="panel__header">
           <span>Email Template <span style="font-size:11px;color:var(--muted);font-weight:400;">(optional — HTML wrapper)</span></span>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -606,6 +662,8 @@
           </div>
         </div>
       </div>
+        <div class="info-box" style="margin-top:12px;">💡 <strong>Pro tip:</strong> Use the <strong>👁 Preview</strong> button to test your template with sample data before saving. Make sure <code>{{BODY}}</code> is present — if it's missing, emails will send with an empty body.</div>
+      </div><!-- /ptab-template -->
     </div>
 
     <!-- RECORDS -->

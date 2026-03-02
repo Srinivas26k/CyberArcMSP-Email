@@ -169,13 +169,22 @@ function _addStep(step = {}) {
       <strong style="font-size:13px;">Step ${idx}</strong>
       <button class="btn btn--ghost btn--sm" style="padding:2px 8px;" onclick="this.closest('div.panel').remove();_renumberSteps()">✕</button>
     </div>
-    <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;margin-bottom:8px;">
+    <div style="display:grid;grid-template-columns:100px 1fr;gap:10px;margin-bottom:10px;">
       <label style="margin:0;">Wait (days)<input type="number" class="step-delay" value="${step.delay_days ?? 3}" min="1" max="30" /></label>
       <label style="margin:0;">Subject hint<input type="text" class="step-subject" placeholder="e.g. Re: or Quick question" value="${_esc(step.subject_hint || '')}" /></label>
     </div>
-    <label style="margin:0;">AI instructions (what to write in this step)
-      <textarea class="step-instructions" rows="2" placeholder="e.g. Short 2-line follow-up, mention their industry challenge...">${_esc(step.instructions || '')}</textarea>
-    </label>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <label style="margin:0;">
+        ✍️ AI Instructions
+        <span style="font-size:11px;color:var(--muted);margin-left:4px;">what angle / tone to use</span>
+        <textarea class="step-instructions" rows="4" placeholder="e.g. Short 2-line follow-up. Mention their industry pain point. Be direct, no fluff.">${_esc(step.instructions || '')}</textarea>
+      </label>
+      <label style="margin:0;">
+        📧 Sample Email
+        <span style="font-size:11px;color:var(--muted);margin-left:4px;">AI mirrors this style</span>
+        <textarea class="step-sample" rows="4" placeholder="Paste a real follow-up email you like. The AI will match its length, tone and structure — not copy the content.">${_esc(step.sample_email || '')}</textarea>
+      </label>
+    </div>`;
   container.appendChild(div);
 }
 
@@ -206,6 +215,7 @@ async function _saveSequence() {
     delay_days:   parseInt(el.querySelector('.step-delay')?.value || '3', 10),
     subject_hint: el.querySelector('.step-subject')?.value.trim() || '',
     instructions: el.querySelector('.step-instructions')?.value.trim() || '',
+    sample_email: el.querySelector('.step-sample')?.value.trim() || '',
   }));
 
   if (!steps.length) { toast('Add at least one step', 'error'); return; }
