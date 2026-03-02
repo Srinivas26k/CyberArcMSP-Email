@@ -103,13 +103,18 @@ def build_email_prompt(
     )
 
     # ── System prompt ─────────────────────────────────────────────────────────
+    _default_tone = (
+        "Write in a professional, warm, executive tone — story-driven, no buzzwords, "
+        "no invented statistics."
+    )
+    _tone_instruction = style_instructions.strip() if style_instructions.strip() else _default_tone
     system_prompt = (
         "You are " + (sender_name or "a senior executive") + " at "
-        + (sender_org or "a technology company") + " writing a B2B cold outreach email. "
-        + sender_tagline + ". "
-        "Write in a professional, warm, executive tone — story-driven, no buzzwords, "
-        "no invented statistics. "
-        'Output ONLY a valid JSON object: {"subject": "string", "bodyHtml": "string"}'
+        + (sender_org or "a technology company") + " writing a cold outreach email. "
+        + (sender_tagline + ". " if sender_tagline else "")
+        + _tone_instruction + " "
+        + ("No buzzwords, no invented statistics. " if not style_instructions.strip() else "")
+        + 'Output ONLY a valid JSON object: {"subject": "string", "bodyHtml": "string"}'
     )
 
     # ── User prompt ───────────────────────────────────────────────────────────
@@ -129,27 +134,6 @@ def build_email_prompt(
         "  Tagline:  " + (sender_tagline or "N/A") + "\n\n"
         "SERVICES (pick 4-5 most relevant to " + industry + "):\n"
         + services_block + "\n\n"
-        + (
-            "════════════════════════\n"
-            "WRITING STYLE GUIDE\n"
-            "════════════════════════\n"
-            "The user has set specific style preferences. Apply them throughout the email:\n"
-            + style_instructions.strip() + "\n\n"
-            if style_instructions.strip() else ""
-        )
-        + (
-            "════════════════════════\n"
-            "STYLE REFERENCE — match this email's tone, sentence length, and voice\n"
-            "════════════════════════\n"
-            "Study the example below. Mirror its:\n"
-            "  • Sentence rhythm and average length\n"
-            "  • Formality level (casual / professional / warm-executive)\n"
-            "  • How it opens and closes\n"
-            "  • Paragraph length\n"
-            "Do NOT copy it word-for-word. Adapt to the current lead and services.\n\n"
-            + sample_email_copy.strip() + "\n\n"
-            if sample_email_copy.strip() else ""
-        )
         + "════════════════════════════════════\n"
         "EXACT STRUCTURE — follow in order:\n"
         "════════════════════════════════════\n\n"
@@ -199,8 +183,18 @@ def build_email_prompt(
         "- Allowed HTML: <p> <ul> <li> <strong> only. No <div>, no <br>, no <a> buttons.\n"
         "- Total body: 280-360 words.\n"
         "- Reference " + greeting + " and " + company + " naturally — not in every sentence.\n"
-        "- Output JSON ONLY. No markdown fences, no explanation outside the JSON.\n\n"
-        "Output:"
+        "- Output JSON ONLY. No markdown fences, no explanation outside the JSON.\n"
+        + (
+            "\n— WRITING STYLE (highest priority — override defaults above):\n"
+            + style_instructions.strip() + "\n"
+            if style_instructions.strip() else ""
+        )
+        + (
+            "\n— STYLE REFERENCE (mirror this email's rhythm, length, and voice — NOT content):\n"
+            + sample_email_copy.strip() + "\n"
+            if sample_email_copy.strip() else ""
+        )
+        + "\nOutput:"
     )
 
     return system_prompt, user_prompt
