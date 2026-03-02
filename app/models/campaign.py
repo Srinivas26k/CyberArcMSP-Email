@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional
 from sqlmodel import Field
 from app.models.base import Base
@@ -12,3 +13,9 @@ class Campaign(Base, table=True):
     sent_at: Optional[str] = None
     error_message: Optional[str] = None
     thread_id: Optional[str] = None
+    # Open tracking
+    tracking_id: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    opened_at: Optional[str] = None
+    open_count: int = Field(default=0)
+    # Sequence step (0 = initial email, 1+ = follow-up steps)
+    sequence_step: int = Field(default=0)

@@ -10,6 +10,7 @@ from app.utils.llm_client import generate_email
 from app.utils.prompt import build_email_prompt
 from app.utils.company import wrap_email_template, render_custom_template
 from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
+from app.utils.scoring import score_lead
 import re
 import random
 
@@ -146,6 +147,24 @@ class CampaignService:
                     else:
                         offices_str = str(offices_raw)
 
+                    # Pre-create Campaign to get tracking_id before send
+                    with Session(engine) as session:
+                        lead_for_unsub = session.get(Lead, lead_id)
+                        pre_campaign = Campaign(
+                            lead_id=lead_id,
+                            subject=pkg["subject"],
+                            sequence_step=0,
+                        )
+                        session.add(pre_campaign)
+                        session.commit()
+                        session.refresh(pre_campaign)
+                        tracking_url   = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
+                        unsubscribe_url = (
+                            f"http://127.0.0.1:8008/api/unsubscribe/{lead_for_unsub.unsubscribe_token}"
+                            if lead_for_unsub else ""
+                        )
+                        campaign_id = pre_campaign.id
+
                     # Build branded HTML wrapper — use custom template if configured
                     _tpl_ctx = dict(
                         inner_html=pkg["bodyHtml"],
@@ -158,6 +177,8 @@ class CampaignService:
                         company_logo=org_logo,
                         company_website=org_web,
                         offices=offices_str,
+                        tracking_url=tracking_url,
+                        unsubscribe_url=unsubscribe_url,
                     )
                     custom_tpl = (cfg.get("custom_email_template") or "").strip()
                     if custom_tpl:
@@ -175,23 +196,22 @@ class CampaignService:
 
                     with Session(engine) as session:
                         lead = session.get(Lead, lead_id)
+                        camp = session.get(Campaign, campaign_id)
                         if result["success"]:
                             lead.status = "sent"
-                            campaign = Campaign(
-                                lead_id=lead_id,
-                                subject=pkg["subject"],
-                                sent_at=datetime.now(timezone.utc).isoformat(),
-                            )
-                            session.add(campaign)
+                            lead.lead_score = score_lead(lead_data)
+                            lead.draft_subject = pkg["subject"]
+                            lead.draft_body = pkg["bodyHtml"]
+                            if camp:
+                                camp.sent_at = datetime.now(timezone.utc).isoformat()
                         else:
                             lead.status = "failed"
-                            campaign = Campaign(
-                                lead_id=lead_id,
-                                error_message=result.get("error", "Unknown error"),
-                                sent_at=datetime.now(timezone.utc).isoformat(),
-                            )
-                            session.add(campaign)
+                            if camp:
+                                camp.error_message = result.get("error", "Unknown error")
+                                camp.sent_at = datetime.now(timezone.utc).isoformat()
                         session.add(lead)
+                        if camp:
+                            session.add(camp)
                         session.commit()
 
                     status = "sent" if result["success"] else "failed"

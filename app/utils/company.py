@@ -129,8 +129,16 @@ def render_custom_template(html_tpl: str, **ctx) -> str:
         'COMPANY_WEBSITE': ctx.get('company_website', ''),
         'OFFICES':         ctx.get('offices', ''),
         'YEAR':            str(datetime.now().year),
+        'UNSUBSCRIBE_URL': ctx.get('unsubscribe_url', ''),
+        'TRACKING_URL':    ctx.get('tracking_url', ''),
     }
-    return _PLACEHOLDER_RE.sub(lambda m: mapping.get(m.group(1), m.group(0)), html_tpl)
+    result = _PLACEHOLDER_RE.sub(lambda m: mapping.get(m.group(1), m.group(0)), html_tpl)
+    # Auto-inject tracking pixel if not already in template
+    tracking_url = ctx.get('tracking_url', '')
+    if tracking_url and 'track/open' not in result:
+        pixel = f'<img src="{tracking_url}" width="1" height="1" style="display:none" alt="">'
+        result = result + pixel
+    return result
 
 
 def wrap_email_template(
@@ -144,6 +152,8 @@ def wrap_email_template(
     company_logo: str = COMPANY_PROFILE["logo_url"],
     company_website: str = COMPANY_PROFILE["website"],
     offices: str = COMPANY_PROFILE["offices"],
+    tracking_url: str = "",
+    unsubscribe_url: str = "",
 ) -> str:
     """
     Wraps the AI-generated email body in a branded, mobile-responsive HTML shell.
@@ -251,11 +261,12 @@ def wrap_email_template(
       </div>
       <div class="footer-legal">
         &copy; {now.year} {company_name}. All rights reserved. Privileged &amp; Confidential.<br>
-        To unsubscribe, reply <em>Unsubscribe</em>.
+        {"<a href='" + unsubscribe_url + "' style='color:#aaa;font-size:11px;text-decoration:none;'>Unsubscribe</a>" if unsubscribe_url else "To unsubscribe, reply <em>Unsubscribe</em>."}
       </div>
     </div>
 
   </div>
 </div>
+{"<img src='" + tracking_url + "' width='1' height='1' style='display:none' alt=''>" if tracking_url else ""}
 </body>
 </html>""".strip()

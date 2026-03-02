@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session, select
 from app.api.dependencies import get_db_session
 from app.models.lead import Lead
+from app.models.campaign import Campaign
 from app.schemas.lead import LeadIn, ApolloQuery
 from app.services.lead_service import lead_service
 from app.utils.apollo_search import apollo_search as _apollo_search
+from app.utils.scoring import score_lead
 from app.core.config import settings
 from app.repositories.lead_repository import lead_repository
 import re
@@ -39,6 +41,8 @@ def _lead_to_dict(lead: Lead) -> dict:
         "draft_subject":   lead.draft_subject,
         "draft_body":      lead.draft_body,
         "created_at":      lead.created_at,
+        "lead_score":      getattr(lead, "lead_score", 0) or 0,
+        "is_unsubscribed": getattr(lead, "is_unsubscribed", False) or False,
     }
 
 
@@ -117,8 +121,9 @@ def add_lead(body: LeadIn, session: Session = Depends(get_db_session)):
     existing = lead_repository.get_by_email(session, body.email)
     if existing:
         raise HTTPException(400, f"Lead {body.email} already exists")
-        
+
     lead = Lead(**body.model_dump())
+    lead.lead_score = score_lead(body.model_dump())
     lead = lead_repository.create(session, lead)
     return {"lead": _lead_to_dict(lead)}
 
@@ -233,7 +238,6 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     from app.utils.company import wrap_email_template, render_custom_template
     from app.utils.email_engine import EmailEngine
     from app.repositories.account_repository import account_repository
-    from app.models.campaign import Campaign
     from datetime import datetime, timezone
 
     lead = lead_repository.get(session, lead_id)
@@ -272,6 +276,16 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
 
     # Wrap in branded template (custom or default)
     identity, _ = _get_identity_and_services(session)
+
+    # Pre-create Campaign to get tracking_id
+    pre_campaign = Campaign(lead_id=lead_id, subject=subject, sequence_step=0)
+    session.add(pre_campaign)
+    session.commit()
+    session.refresh(pre_campaign)
+    tracking_url    = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
+    unsubscribe_url = f"http://127.0.0.1:8008/api/unsubscribe/{lead.unsubscribe_token}"
+    campaign_id     = pre_campaign.id
+
     _tpl_ctx = dict(
         inner_html=body_html_raw,
         sender_email=acc.email,
@@ -283,6 +297,8 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         company_logo=getattr(identity, "logo_url", ""),
         company_website=getattr(identity, "website", ""),
         offices=_offices_to_str(getattr(identity, "offices", [])),
+        tracking_url=tracking_url,
+        unsubscribe_url=unsubscribe_url,
     )
     custom_tpl = (cfg.get("custom_email_template") or "").strip()
     html_body = render_custom_template(custom_tpl, **_tpl_ctx) if custom_tpl else wrap_email_template(**_tpl_ctx)
@@ -300,15 +316,17 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     )
     result = results[0]
 
+    camp = session.get(Campaign, campaign_id)
     lead.status = "sent" if result["success"] else "failed"
-    campaign = Campaign(
-        lead_id=lead_id,
-        subject=subject,
-        sent_at=datetime.now(timezone.utc).isoformat(),
-        error_message="" if result["success"] else result.get("error", ""),
-    )
+    lead.lead_score = score_lead(_lead_to_dict(lead))
+    if camp:
+        if result["success"]:
+            camp.sent_at = datetime.now(timezone.utc).isoformat()
+        else:
+            camp.error_message = result.get("error", "")
+            camp.sent_at = datetime.now(timezone.utc).isoformat()
+        session.add(camp)
     session.add(lead)
-    session.add(campaign)
     session.commit()
 
     if result["success"]:

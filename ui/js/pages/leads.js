@@ -70,10 +70,14 @@ function _renderTable(leads) {
           <th style="width:36px;">
             <input type="checkbox" id="leads-select-all" title="Select / deselect all" style="cursor:pointer;" />
           </th>
-          <th>Email</th><th>Name</th><th>Company</th><th>Role</th><th>Location</th><th>Status</th>
+          <th>Email</th><th>Name</th><th>Company</th><th>Role</th><th>Location</th><th>Score</th><th>Status</th>
         </tr></thead>
         <tbody>
-          ${leads.map((l) => `
+          ${leads.map((l) => {
+            const score = l.lead_score ?? 0;
+            const scoreColor = score >= 70 ? '#27ae60' : score >= 40 ? '#f39c12' : '#95a5a6';
+            const scoreLabel = score >= 70 ? '🔥' : score >= 40 ? '⭐' : '';
+            return `
             <tr data-id="${l.id}" class="lead-row">
               <td><input type="checkbox" class="lead-chk" data-id="${l.id}" style="cursor:pointer;" /></td>
               <td>${esc(l.email)}</td>
@@ -81,8 +85,10 @@ function _renderTable(leads) {
               <td>${esc(l.company || '—')}</td>
               <td class="td--muted">${esc(l.role || '—')}</td>
               <td class="td--muted">${esc(l.location || '—')}</td>
+              <td><span style="font-weight:700;color:${scoreColor};">${scoreLabel} ${score}</span></td>
               <td><span class="status-badge ${esc(l.status)}">${esc(l.status)}</span></td>
-            </tr>`).join('')}
+            </tr>`;
+          }).join('')}
         </tbody>
       </table>
     </div>`;
