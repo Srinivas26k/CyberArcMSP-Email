@@ -98,7 +98,7 @@ function _makeSelect(idx, currentProvider) {
   const sel = document.createElement('select');
   sel.className = 'slot-provider';
   sel.dataset.idx = String(idx);
-  sel.style.cssText = 'width:130px;flex-shrink:0;font-size:0.8rem;';
+  sel.style.cssText = 'width:150px;flex-shrink:0;font-size:0.8rem;';
   LLM_PROVIDERS.forEach((p) => {
     const opt = document.createElement('option');
     opt.value = p.value;
@@ -178,7 +178,7 @@ function renderSlots() {
 
     // ── Row 2: model name | test button | status ───────────────────────────
     const row2 = document.createElement('div');
-    row2.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:8px;';
+    row2.style.cssText = 'display:flex;align-items:center;gap:6px;margin-top:8px;padding-left:26px;';
 
     const modelInp = _makeInput('text', i, 'slot-model', 'Model name  (e.g. llama-3.3-70b-versatile)', slot.model);
     row2.appendChild(modelInp);

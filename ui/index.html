@@ -459,25 +459,21 @@
         </div>
       </div>
       <div class="panel" style="margin-bottom:16px;">
-        <div class="panel__body" style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap;">
-          <div style="flex:1;min-width:180px;">
-            <label style="margin-bottom:4px;">Sender Account
+        <div class="panel__body">
+          <div style="display:grid;grid-template-columns:1fr 110px 130px auto;gap:16px;align-items:end;">
+            <label>Sender Account
               <select id="outbox-account-select"><option value="">Loading accounts…</option></select>
             </label>
-          </div>
-          <div style="width:120px;">
-            <label style="margin-bottom:4px;">Delay (s)<input type="number" id="outbox-delay-input" value="60" min="10" max="3600" /></label>
-          </div>
-          <div style="width:130px;">
-            <label style="margin-bottom:4px;">Max leads per run
+            <label>Delay (s)<input type="number" id="outbox-delay-input" value="60" min="10" max="3600" /></label>
+            <label>Max leads per run
               <input type="number" id="outbox-max-leads" value="50" min="1" max="5000" />
             </label>
-            <p style="font-size:10px;color:var(--muted);margin:2px 0 0;line-height:1.4;">Change in Settings → Daily limit</p>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="checkbox" id="outbox-select-all" />
+              <label for="outbox-select-all" style="margin:0;font-size:13px;">Select all</label>
+            </div>
           </div>
-          <div style="display:flex;align-items:center;gap:6px;padding-bottom:4px;">
-            <input type="checkbox" id="outbox-select-all" />
-            <label for="outbox-select-all" style="margin:0;font-size:13px;">Select all</label>
-          </div>
+          <p style="font-size:10px;color:var(--muted);margin:6px 0 0;line-height:1.4;">Max leads: change in Settings → Daily limit</p>
         </div>
       </div>
       <div class="panel">
@@ -554,21 +550,19 @@
         <div class="panel__body">
           <div class="grid grid--2">
             <label>Email Address<input type="email" id="acc-email" placeholder="sender@yourdomain.com" /></label>
-            <div>
-              <label>Provider
-                <div style="display:flex;gap:8px;">
-                  <select id="acc-provider" style="flex:1;">
-                    <option value="gmail">Gmail / Google Workspace</option>
-                    <option value="outlook">Outlook / Hotmail</option>
-                    <option value="m365">Microsoft 365</option>
-                    <option value="smtp">Custom SMTP</option>
-                  </select>
-                  <button class="btn btn--ghost btn--sm" id="detect-provider-btn" title="Auto-detect from email domain">Auto-detect</button>
-                </div>
-              </label>
-              <p class="info-box" id="provider-hint" style="margin-top:6px;font-size:12px;"></p>
-            </div>
+            <label>Provider
+              <div style="display:flex;gap:8px;">
+                <select id="acc-provider" style="flex:1;">
+                  <option value="gmail">Gmail / Google Workspace</option>
+                  <option value="outlook">Outlook / Hotmail</option>
+                  <option value="m365">Microsoft 365</option>
+                  <option value="smtp">Custom SMTP</option>
+                </select>
+                <button class="btn btn--ghost btn--sm" id="detect-provider-btn" title="Auto-detect from email domain">Auto-detect</button>
+              </div>
+            </label>
           </div>
+          <p class="info-box" id="provider-hint" style="margin-top:8px;font-size:12px;"></p>
           <div class="grid grid--2" style="margin-top:12px;">
             <label id="acc-pass-label">App Password<input type="password" id="acc-password" placeholder="xxxx xxxx xxxx xxxx" autocomplete="new-password" /></label>
             <label>Display Name (optional)<input type="text" id="acc-name" placeholder="Your Name" /></label>
@@ -814,6 +808,37 @@
             </label>
             <p style="font-size:11px;color:var(--danger);margin-top:8px;">⚠️ Restore overwrites all current data. Download a backup first.</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Import from Another Tool -->
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel__header"><span>Import from Another Tool</span></div>
+        <div class="panel__body">
+          <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">
+            Have contacts in another CRM, spreadsheet, or outreach tool? Use the prompt below with any AI assistant (ChatGPT, Claude, Gemini, etc.) to convert your existing data into the right format — then upload the result as a CSV on the <strong>Leads</strong> page.
+          </p>
+          <div style="position:relative;">
+            <textarea id="migration-prompt" readonly rows="11"
+              style="font-size:12px;font-family:monospace;resize:vertical;width:100%;box-sizing:border-box;padding:12px 80px 12px 12px;color:var(--text);background:var(--bg-secondary,#f8f9fa);border:1px solid var(--border);border-radius:6px;line-height:1.6;">I have a list of contacts from [your tool — e.g. HubSpot / LinkedIn / Apollo / spreadsheet].
+
+Please convert them into a CSV with exactly these columns (in this order):
+email, first_name, last_name, company, title, location, industry, seniority, employees, website, linkedin_url, phone
+
+Rules:
+- First row must be the header line above, one contact per row after that
+- email is required — skip any row that has no email address
+- Use an empty string (not "N/A") for any missing field
+- Remove exact duplicate emails (keep the first occurrence)
+- Do not add extra columns, notes, or commentary
+- Return only the CSV text, nothing else
+
+Here is my data:
+[paste your contacts here]</textarea>
+            <button class="btn btn--ghost btn--sm" id="copy-migration-prompt-btn"
+              style="position:absolute;top:8px;right:8px;">Copy</button>
+          </div>
+          <p style="font-size:11px;color:var(--muted);margin:8px 0 0;">Save the AI's output as a <code>.csv</code> file, then use <strong>Import CSV</strong> on the Leads page to upload it.</p>
         </div>
       </div>
     </div>

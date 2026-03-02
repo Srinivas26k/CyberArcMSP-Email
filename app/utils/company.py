@@ -94,7 +94,7 @@ def _build_cta_button(calendly_url: str) -> str:
         '            text-decoration:none;font-weight:700;border-radius:6px;font-size:15px;'
         '            letter-spacing:0.3px;box-shadow:0 3px 8px rgba(0,86,179,0.3);'
         '            mso-padding-alt:14px 32px;">'
-        '    &#128197; Book a 15-Minute Strategy Call'
+        '    Book a 15-Minute Strategy Call'
         '  </a>'
         '</div>'
     )
@@ -235,16 +235,18 @@ def wrap_email_template(
       <span class="brand-name">{company_name}</span>
     </div>
 
-    <!-- BODY (AI-generated) + dynamic sign-off -->
+    <!-- BODY (AI-generated) -->
     <div class="email-body">
       {inner_html}
-      <p style="margin:20px 0 2px 0;"><strong>{sender_name}</strong><br>
-      <span style="font-size:13px;color:#666;">{sender_title} | {company_name}</span></p>
     </div>
 
-    <!-- CTA -->
+    <!-- CTA + Signature (grouped so name appears directly below button) -->
     <div class="email-cta">
       {cta_html}
+      <div style="text-align:center;padding:4px 24px 20px;">
+        <p style="margin:8px 0 2px;font-weight:700;font-size:15px;color:#0056b3;">{sender_name}</p>
+        <p style="margin:0;font-size:13px;color:#666;">{sender_title} &middot; {company_name}</p>
+      </div>
     </div>
 
     <!-- FOOTER -->

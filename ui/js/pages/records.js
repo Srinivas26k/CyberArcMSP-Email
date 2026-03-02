@@ -8,6 +8,14 @@ import { setText } from '../utils.js';
 export function init(register) {
   document.getElementById('restore-input')?.addEventListener('change', handleRestoreInput);
 
+  document.getElementById('copy-migration-prompt-btn')?.addEventListener('click', function () {
+    const text = document.getElementById('migration-prompt')?.value ?? '';
+    navigator.clipboard.writeText(text).then(() => {
+      this.textContent = 'Copied!';
+      setTimeout(() => { this.textContent = 'Copy'; }, 2000);
+    }).catch(() => toast('Could not copy — please select and copy manually.', 'warning'));
+  });
+
   register('records', {
     onEnter: () => { loadRecords(); loadDbInfo(); },
     onLeave: () => {},
