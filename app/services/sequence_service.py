@@ -148,6 +148,7 @@ async def _process_enrollment(enroll_id: int) -> bool:
 
         # Build step-specific instructions
         step_instructions = step.get("instructions", "")
+        step_sample       = step.get("sample_email", "")
         initial_subject   = enrollment.initial_subject or lead.draft_subject or ""
         follow_up_context = (
             f"This is follow-up email #{enrollment.current_step + 1} in a sequence.\n"
@@ -158,9 +159,11 @@ async def _process_enrollment(enroll_id: int) -> bool:
 
         base_style   = cfg.get("email_style_instructions", "")
         merged_style = f"{base_style}\n\n{follow_up_context}".strip()
+        # Prefer step-level sample email; fall back to account-wide sample
+        merged_sample = step_sample or cfg.get("sample_email_copy", "")
 
         sys_p, usr_p = build_email_prompt(
-            lead_data, identity, services, merged_style, ""
+            lead_data, identity, services, merged_style, merged_sample
         )
 
         # Override subject if hint provided
