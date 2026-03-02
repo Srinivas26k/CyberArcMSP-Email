@@ -6,7 +6,7 @@ wheels/
 *.egg-info
 
 # Electron build OUTPUT (keep the build/ RESOURCES folder tracked)
-# dist/
+dist/
 
 # Virtual environments
 .venv

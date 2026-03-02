@@ -9,10 +9,9 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "dist": "electron-builder --config",
-    "dist:win": "CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
-    "dist:mac": "electron-builder --mac",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "python3 scripts/download_uv.py linux && electron-builder --linux",
+    "dist:win": "python3 scripts/download_uv.py win32 && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
+    "dist:mac": "python3 scripts/download_uv.py darwin && electron-builder --mac"
   },
   "devDependencies": {
     "electron": "^29.0.0",
@@ -53,9 +52,12 @@
       {
         "from": "ui",
         "to": "app/ui",
-        "filter": [
-          "**/*"
-        ]
+        "filter": ["**/*"]
+      },
+      {
+        "from": "bundled-uv",
+        "to": "app/bundled-uv",
+        "filter": ["**"]
       }
     ],
     "win": {

@@ -31,24 +31,31 @@ const getServerUrl = () => `http://127.0.0.1:${SERVER_PORT}`;
 // User-data directory — survives upgrades on all platforms
 const USER_DATA_DIR = app.getPath('userData');   // e.g. %APPDATA%\CyberArc Outreach
 
-let mainWindow = null;
+let mainWindow   = null;
+let splashWindow = null;
 let serverProcess = null;
 let startupLogs = [];
 let startupExit = null;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Resolve Python executable inside the bundled runtime.
-//
-// On Windows the .venv/Scripts/python.exe produced by uv is a real PE32
-// binary, so we check it directly.
-//
-// On Linux/macOS the .venv/bin/python entries are symlinks that point to the
-// CI-runner's uv-managed Python path — a path that does NOT exist on the
-// user's machine.  The build step therefore copies the entire python-build-
-// standalone installation into bundled-python/ and merges .venv site-packages
-// into it.  We prefer bundled-python/ first, and fall back to .venv for
-// dev-mode or legacy builds.
+// Splash / loading window — shown while the Python server boots
 // ─────────────────────────────────────────────────────────────────────────────
+
+function showSplash() {
+  splashWindow = new BrowserWindow({
+    width: 400, height: 240,
+    frame: false, transparent: true, alwaysOnTop: true,
+    resizable: false, center: true,
+    icon: path.join(__dirname, '..', 'ui', 'icon.png'),
+    webPreferences: { nodeIntegration: false, contextIsolation: true },
+  });
+  splashWindow.loadFile(path.join(__dirname, 'splash.html'));
+  splashWindow.on('closed', () => { splashWindow = null; });
+}
+
+function closeSplash() {
+  if (splashWindow) { splashWindow.close(); splashWindow = null; }
+}
 
 function resolvePythonExe(projectDir) {
   const isWin = process.platform === 'win32';
@@ -105,49 +112,60 @@ function startServer() {
     ? path.join(process.resourcesPath, 'app')
     : path.join(__dirname, '..');
 
+  const isWin = process.platform === 'win32';
+
   const env = Object.assign({}, process.env, {
-    // Tell database.py where to store the SQLite file
-    APP_DATA_DIR: USER_DATA_DIR,
-    // Prevent Python from buffering stdout/stderr (important for log capture)
-    PYTHONUNBUFFERED: '1',
-    // Avoid Python from looking for .pyc in read-only bundle directories
+    APP_DATA_DIR:          USER_DATA_DIR,
+    PYTHONUNBUFFERED:      '1',
     PYTHONDONTWRITEBYTECODE: '1',
   });
 
   let cmd, args;
 
-  // Always extend PATH so uv can be found on Linux/macOS
-  if (process.platform !== 'win32') {
-    const home = process.env.HOME || '';
-    env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
-  }
+  if (isPackaged) {
+    // ── Packaged (all platforms): use the bundled uv binary ─────────────────
+    // uv manages Python download + venv creation automatically on first run.
+    // The venv is stored in APP_DATA_DIR so it persists across app upgrades.
+    const uvBin = path.join(projectDir, 'bundled-uv', isWin ? 'uv.exe' : 'uv');
 
-  const isLinuxOrMac = process.platform === 'linux' || process.platform === 'darwin';
-
-  if (isPackaged && !isLinuxOrMac) {
-    // Windows packaged — use the bundled Python executable
-    const pythonExe = resolvePythonExe(projectDir);
-    if (!pythonExe) {
+    if (!fs.existsSync(uvBin)) {
       dialog.showErrorBox(
-        'Python Not Found',
-        `The bundled Python interpreter could not be located.\n\n` +
-        `Looked inside: ${path.join(projectDir, 'bundled-python')}\n` +
-        `         and: ${path.join(projectDir, '.venv')}\n\n` +
-        `Please re-download the latest installer. If the problem persists contact support.`
+        'Installation Corrupted',
+        `A required component is missing from the installation.\n\n` +
+        `Missing: bundled-uv/${isWin ? 'uv.exe' : 'uv'}\n\n` +
+        `Please uninstall and re-download the latest version from our website.`
       );
       app.quit();
       return;
     }
-    cmd = pythonExe;
+
+    // Make sure the binary is executable (Linux/macOS)
+    if (!isWin) {
+      try { fs.chmodSync(uvBin, 0o755); } catch (_) {}
+    }
+
+    // Store the venv in the user data dir — survives app updates
+    env.UV_PROJECT_ENVIRONMENT = path.join(USER_DATA_DIR, 'python-env');
+    // Tell uv where to store its Python downloads (next to venv, user-owned)
+    env.UV_PYTHON_DIR = path.join(USER_DATA_DIR, 'python-runtime');
+    // Use managed Python — uv downloads it on first run
+    env.UV_PYTHON_DOWNLOADS = 'automatic';
+
+    cmd  = uvBin;
     args = [
-      '-m', 'uvicorn', 'main:app',
+      'run', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
       '--port', String(SERVER_PORT),
       '--log-level', 'warning',
     ];
+
   } else {
-    // Dev mode OR packaged Linux/macOS — use uv (manages Python + deps automatically)
-    cmd = process.platform === 'win32' ? 'uv.exe' : 'uv';
+    // ── Dev mode: use system uv ──────────────────────────────────────────────
+    if (!isWin) {
+      const home = process.env.HOME || '';
+      env.PATH = `${env.PATH}:/usr/local/bin:${home}/.local/bin:${home}/.cargo/bin`;
+    }
+    cmd  = isWin ? 'uv.exe' : 'uv';
     args = [
       'run', 'uvicorn', 'main:app',
       '--host', '127.0.0.1',
@@ -170,14 +188,11 @@ function startServer() {
   serverProcess.on('error', (err) => {
     console.error(`[Electron] Failed to start server: ${err.message}`);
     dialog.showErrorBox(
-      'Server Start Failed',
-      `Could not start the Python background server.\n\n` +
-      `Error: ${err.message}\n` +
-      `Runner: ${cmd}\n` +
-      `Working dir: ${projectDir}\n\n` +
-      `On Linux/macOS make sure 'uv' is installed:\n` +
-      `  curl -LsSf https://astral.sh/uv/install.sh | sh\n\n` +
-      `Then restart the app.`
+      'Startup Error',
+      `The application could not start the background service.\n\n` +
+      `Error: ${err.message}\n\n` +
+      `Please try restarting the app. If the problem persists, ` +
+      `uninstall and re-download the latest version.`
     );
   });
 
@@ -340,6 +355,10 @@ function createWindow() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.whenReady().then(async () => {
+  // Show splash immediately so users see feedback right away.
+  // On first run, uv downloads Python + packages which can take 1-3 minutes.
+  showSplash();
+
   const preferredPorts = [8008, 8009, 8010];
   let started = false;
   let lastErr = null;
@@ -348,8 +367,9 @@ app.whenReady().then(async () => {
     SERVER_PORT = port;
     startServer();
     try {
-      // Give slower Windows machines enough time on first start.
-      await waitForServer(150, 800);   // up to ~120 s
+      // First run on a fresh machine: uv downloads Python (~30 MB) then
+      // installs all packages — allow up to 5 minutes (375 × 800 ms).
+      await waitForServer(375, 800);
       started = true;
       break;
     } catch (err) {
@@ -361,19 +381,17 @@ app.whenReady().then(async () => {
   }
 
   if (!started) {
+    closeSplash();
     const extra = startupExit && startupExit.logs
       ? `\n\nLast server logs:\n${startupExit.logs}`
       : '';
     const errMsg = lastErr ? `\nError: ${lastErr.message}\n` : '\n';
     dialog.showErrorBox(
       'Startup Failed',
-      `The Python server could not start.\n${errMsg}` +
-      `Data directory: ${USER_DATA_DIR}\n` +
-      `Ports tried: 8002, 8003, 8004\n\n` +
-      `Possible causes:\n` +
-      `  • Antivirus blocking bundled Python\n` +
-      `  • Incomplete installation (.venv or dependencies missing)\n` +
-      `  • Corporate endpoint protection blocking localhost server\n` +
+      `The application could not start.\n${errMsg}` +
+      `Please check that you have an internet connection on first launch\n` +
+      `(the app downloads its Python runtime once on first use).\n\n` +
+      `If this keeps happening, please re-download and reinstall the app.` +
       extra
     );
     app.quit();
@@ -382,17 +400,15 @@ app.whenReady().then(async () => {
 
   try {
     createWindow();
+    closeSplash();
   } catch (err) {
+    closeSplash();
     console.error('[Electron] Could not connect to server:', err.message);
     dialog.showErrorBox(
       'Startup Failed',
-      `The Python server could not start within 32 seconds.\n\n` +
-      `Data directory: ${USER_DATA_DIR}\n\n` +
-      `Possible causes:\n` +
-      `  • Antivirus blocking the bundled Python\n` +
-      `  • Port ${SERVER_PORT} in use by another app\n` +
-      `  • .venv missing from the installation\n\n` +
-      `Please re-download the latest installer or contact support.`
+      `The application could not connect to its background service.\n\n` +
+      `Please try restarting the app. If the problem persists, ` +
+      `re-download and reinstall the latest version.`
     );
     app.quit();
   }
