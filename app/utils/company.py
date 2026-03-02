@@ -4,6 +4,7 @@ company.py — Brand context, service portfolio, and email template builder for 
 This file is the SINGLE source of truth for all company-specific content.
 Update this file to change branding, services, or email design.
 """
+import re
 from datetime import datetime
 
 
@@ -77,6 +78,69 @@ SERVICE_PORTFOLIO = {
 # EMAIL HTML TEMPLATE BUILDER  (mobile-responsive)
 # ─────────────────────────────────────────────────────────────────────────────
 
+_PLACEHOLDER_RE = re.compile(r'\{\{([A-Z_]+)\}\}')
+
+
+def _build_cta_button(calendly_url: str) -> str:
+    """Build the centred booking CTA button HTML. Returns empty string if no URL."""
+    if not calendly_url:
+        return ""
+    now = datetime.now()
+    url = f"{calendly_url}?month={now.year}-{now.month:02d}"
+    return (
+        '<div style="margin:28px auto;text-align:center;padding:0 24px;">'
+        f'  <a href="{url}"'
+        '     style="display:inline-block;padding:14px 32px;background:#0056b3;color:#ffffff;'
+        '            text-decoration:none;font-weight:700;border-radius:6px;font-size:15px;'
+        '            letter-spacing:0.3px;box-shadow:0 3px 8px rgba(0,86,179,0.3);'
+        '            mso-padding-alt:14px 32px;">'
+        '    &#128197; Book a 15-Minute Strategy Call'
+        '  </a>'
+        '</div>'
+    )
+
+
+def render_custom_template(html_tpl: str, **ctx) -> str:
+    """
+    Render a user-supplied HTML template by substituting {{PLACEHOLDER}} tokens.
+
+    Available tokens (all optional except {{BODY}}):
+        {{BODY}}             — AI-generated email body HTML  (REQUIRED)
+        {{CTA_BUTTON}}       — Booking button HTML (auto-built from calendly_url)
+        {{SENDER_NAME}}      — Sender full name
+        {{SENDER_TITLE}}     — Sender title / role
+        {{SENDER_EMAIL}}     — Sender email address
+        {{COMPANY_NAME}}     — Company / brand name
+        {{COMPANY_TAGLINE}}  — One-line company tagline
+        {{COMPANY_LOGO}}     — Logo image URL
+        {{COMPANY_WEBSITE}}  — Company website URL
+        {{OFFICES}}          — Office locations string
+        {{YEAR}}             — Current year (4-digit)
+    """
+    mapping = {
+        'BODY':            ctx.get('inner_html', ''),
+        'CTA_BUTTON':      _build_cta_button(ctx.get('calendly_url', '')),
+        'SENDER_NAME':     ctx.get('sender_name', ''),
+        'SENDER_TITLE':    ctx.get('sender_title', ''),
+        'SENDER_EMAIL':    ctx.get('sender_email', ''),
+        'COMPANY_NAME':    ctx.get('company_name', ''),
+        'COMPANY_TAGLINE': ctx.get('company_tagline', ''),
+        'COMPANY_LOGO':    ctx.get('company_logo', ''),
+        'COMPANY_WEBSITE': ctx.get('company_website', ''),
+        'OFFICES':         ctx.get('offices', ''),
+        'YEAR':            str(datetime.now().year),
+        'UNSUBSCRIBE_URL': ctx.get('unsubscribe_url', ''),
+        'TRACKING_URL':    ctx.get('tracking_url', ''),
+    }
+    result = _PLACEHOLDER_RE.sub(lambda m: mapping.get(m.group(1), m.group(0)), html_tpl)
+    # Auto-inject tracking pixel if not already in template
+    tracking_url = ctx.get('tracking_url', '')
+    if tracking_url and 'track/open' not in result:
+        pixel = f'<img src="{tracking_url}" width="1" height="1" style="display:none" alt="">'
+        result = result + pixel
+    return result
+
+
 def wrap_email_template(
     inner_html: str,
     sender_email: str,
@@ -88,6 +152,8 @@ def wrap_email_template(
     company_logo: str = COMPANY_PROFILE["logo_url"],
     company_website: str = COMPANY_PROFILE["website"],
     offices: str = COMPANY_PROFILE["offices"],
+    tracking_url: str = "",
+    unsubscribe_url: str = "",
 ) -> str:
     """
     Wraps the AI-generated email body in a branded, mobile-responsive HTML shell.
@@ -100,18 +166,7 @@ def wrap_email_template(
     Make sure after the "Best," tag, there is a <p>{SENDER_NAME}</p>
     """
     now = datetime.now()
-    calendly_month = f"{calendly_url}?month={now.year}-{now.month:02d}"
-
-    cta_html = f"""
-    <div style="margin:28px auto;text-align:center;padding:0 24px;">
-      <a href="{calendly_month}"
-         style="display:inline-block;padding:14px 32px;background:#0056b3;color:#ffffff;
-                text-decoration:none;font-weight:700;border-radius:6px;font-size:15px;
-                letter-spacing:0.3px;box-shadow:0 3px 8px rgba(0,86,179,0.3);
-                mso-padding-alt:14px 32px;">
-        &#128197; Book a 15-Minute Strategy Call
-      </a>
-    </div>""" if calendly_url else ""
+    cta_html = _build_cta_button(calendly_url)
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -206,11 +261,12 @@ def wrap_email_template(
       </div>
       <div class="footer-legal">
         &copy; {now.year} {company_name}. All rights reserved. Privileged &amp; Confidential.<br>
-        To unsubscribe, reply <em>Unsubscribe</em>.
+        {"<a href='" + unsubscribe_url + "' style='color:#aaa;font-size:11px;text-decoration:none;'>Unsubscribe</a>" if unsubscribe_url else "To unsubscribe, reply <em>Unsubscribe</em>."}
       </div>
     </div>
 
   </div>
 </div>
+{"<img src='" + tracking_url + "' width='1' height='1' style='display:none' alt=''>" if tracking_url else ""}
 </body>
 </html>""".strip()

@@ -42,7 +42,7 @@ async function loadReplies() {
     if (navBadge)   { navBadge.textContent = replies.length; navBadge.style.display = replies.length ? '' : 'none'; }
 
     if (!replies.length) {
-      wrap.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-state__icon">💬</div><p class="empty-state__text">No replies yet. Click <em>Check Inboxes</em> to sync.</p></div>`;
+      wrap.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-state__icon"><svg class="icon" aria-hidden="true" width="40" height="40"><use href="#icon-message"/></svg></div><p class="empty-state__text">No replies yet. Click <em>Check Inboxes</em> to sync.</p></div>`;
       return;
     }
 

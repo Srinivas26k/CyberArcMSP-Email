@@ -15,6 +15,7 @@ import { init as initInboxes }   from './pages/inboxes.js';
 import { init as initSettings }  from './pages/settings.js';
 import { init as initPersona }   from './pages/persona.js';
 import { init as initRecords }   from './pages/records.js';
+import { init as initSequences } from './pages/sequences.js';
 
 async function boot() {
   // Initialise every page module (each registers itself with the router)
@@ -28,6 +29,7 @@ async function boot() {
     initSettings,
     initPersona,
     initRecords,
+    initSequences,
   ].forEach((fn) => fn(registerPage));
 
   // Guard unload while a campaign is running

@@ -1,7 +1,7 @@
 /**
  * pages/outbox.js — Campaign control: send config, outbox queue, email preview
  */
-import { leadsAPI, accountsAPI, campaignsAPI } from '../api.js';
+import { leadsAPI, accountsAPI, campaignsAPI, settingsAPI } from '../api.js';
 import { esc } from '../utils.js';
 import { toast } from '../toast.js';
 
@@ -27,6 +27,12 @@ export function init(register) {
   document.getElementById('eed-tab-preview')?.addEventListener('click', () => _eedSwitchTab('preview'));
   document.getElementById('eed-tab-edit')?.addEventListener('click',   () => _eedSwitchTab('edit'));
 
+  // Lead timeline drawer
+  document.getElementById('ltd-close')?.addEventListener('click',          closeLeadDetailDrawer);
+  document.getElementById('lead-detail-overlay')?.addEventListener('click', closeLeadDetailDrawer);
+  document.getElementById('ltd-retry-btn')?.addEventListener('click',       _ltdRetry);
+  document.getElementById('ltd-craft-retry-btn')?.addEventListener('click', _ltdCraftRetry);
+
   // SSE progress ticks — refresh outbox silently while running
   document.addEventListener('srv:stat', () => { if (_running) refreshOutboxSilently(); });
 
@@ -37,8 +43,12 @@ export function init(register) {
   });
 
   register('outbox', {
-    onEnter: () => { loadOutbox(); populateAccountSelect(); },
-    onLeave: () => { closeEmailDrawer(); },
+    onEnter: () => {
+      loadOutbox();
+      populateAccountSelect();
+      _loadDailyLimit();
+    },
+    onLeave: () => { closeEmailDrawer(); closeLeadDetailDrawer(); },
   });
 }
 
@@ -66,20 +76,30 @@ async function loadOutbox() {
           <thead><tr>
             <th style="width:32px;"><input type="checkbox" id="outbox-select-all-hdr"></th>
             <th style="width:20px;"></th>
-            <th style="width:72px;"></th>
+            <th style="width:100px;"></th>
             <th>Email</th><th>Company</th><th>Role</th><th>Status</th>
           </tr></thead>
           <tbody id="outbox-tbody">
-            ${leads.map((l) => `
-              <tr data-id="${l.id}">
-                <td class="cb-cell"><input type="checkbox" class="lead-cb" value="${l.id}" ${_selectedIds.has(l.id) ? 'checked' : ''}></td>
-                <td class="drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);">&#10783;</td>
-                <td><button class="btn btn--ghost btn--sm craft-email-btn" data-id="${l.id}" data-name="${esc(((l.first_name||'') + ' ' + (l.last_name||'')).trim())}" data-email="${esc(l.email)}" data-company="${esc(l.company||'')}" style="font-size:11px;padding:4px 10px;white-space:nowrap;">&#9998; Craft</button></td>
+            ${leads.map((l) => {
+              const isFailed = l.status === 'failed';
+              const errTip   = isFailed && l.last_error ? ` title="${esc(l.last_error)}"` : '';
+              return `
+              <tr data-id="${l.id}" class="outbox-row" style="cursor:pointer;">
+                <td class="cb-cell" onclick="event.stopPropagation()"><input type="checkbox" class="lead-cb" value="${l.id}" ${_selectedIds.has(l.id) ? 'checked' : ''}></td>
+                <td class="drag-handle" title="Drag to reorder" style="cursor:grab;color:var(--muted);" onclick="event.stopPropagation()">&#10783;</td>
+                <td onclick="event.stopPropagation()" style="white-space:nowrap;display:flex;gap:4px;align-items:center;">
+                  <button class="btn btn--ghost btn--sm craft-email-btn" data-id="${l.id}" data-name="${esc(((l.first_name||'') + ' ' + (l.last_name||'')).trim())}" data-email="${esc(l.email)}" data-company="${esc(l.company||'')}" style="font-size:11px;padding:4px 10px;white-space:nowrap;">&#9998; Craft</button>
+                  ${isFailed ? `<button class="btn btn--sm retry-btn" data-id="${l.id}" style="font-size:11px;padding:4px 8px;background:#fef2f2;color:#be123c;border:1px solid #fecdd3;">↺</button>` : ''}
+                </td>
                 <td>${esc(l.email)}</td>
                 <td>${esc(l.company || '\u2014')}</td>
                 <td class="td--muted">${esc(l.role || '\u2014')}</td>
-                <td><span class="status-badge ${esc(l.status)}">${esc(l.status)}</span></td>
-              </tr>`).join('')}
+                <td>
+                  <span class="status-badge ${esc(l.status)}"${errTip}>${esc(l.status)}</span>
+                  ${isFailed && l.last_error ? `<div style="font-size:10px;color:#be123c;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="${esc(l.last_error)}">${esc(l.last_error.substring(0, 60))}${l.last_error.length > 60 ? '…' : ''}</div>` : ''}
+                </td>
+              </tr>`;
+            }).join('')}
           </tbody>
         </table>
       </div>`;
@@ -93,6 +113,33 @@ async function loadOutbox() {
         const name    = btn.dataset.name?.trim() || btn.dataset.email;
         const company = btn.dataset.company;
         openEmailDrawer(id, name, company);
+      });
+    });
+
+    // Wire Retry buttons (quick reset)
+    wrap.querySelectorAll('.retry-btn').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = parseInt(btn.dataset.id);
+        btn.disabled = true;
+        btn.textContent = '…';
+        try {
+          await leadsAPI.retry(id);
+          toast('Lead reset to pending — Craft or Start Sending to resend', 'success');
+          await loadOutbox();
+        } catch (e) {
+          toast('Retry failed: ' + e.message, 'error');
+          btn.disabled = false;
+          btn.textContent = '↺';
+        }
+      });
+    });
+
+    // Wire row click → open lead timeline drawer
+    wrap.querySelectorAll('.outbox-row').forEach((row) => {
+      row.addEventListener('click', () => {
+        const id   = parseInt(row.dataset.id);
+        const lead = leads.find((l) => l.id === id);
+        if (lead) openLeadDetailDrawer(lead);
       });
     });
 
@@ -170,7 +217,7 @@ async function populateAccountSelect() {
   if (!sel) return;
   try {
     const r = await accountsAPI.list();
-    sel.innerHTML = '<option value="">🔄 Round-Robin (auto-cycle all accounts)</option>' +
+    sel.innerHTML = '<option value="">↻ Round-Robin (auto-cycle all accounts)</option>' +
       (r.accounts || []).map((a) =>
         `<option value="${a.id}">${esc(a.display_name || a.email)} &lt;${esc(a.email)}&gt;</option>`
       ).join('');
@@ -178,10 +225,11 @@ async function populateAccountSelect() {
 }
 
 async function startSending() {
-  const btn    = document.getElementById('start-campaign-btn');
-  const delay  = parseInt(document.getElementById('outbox-delay-input')?.value) || 65;
-  const selAcc = document.getElementById('outbox-account-select');
-  const accId  = selAcc?.value ? parseInt(selAcc.value) : null;
+  const btn       = document.getElementById('start-campaign-btn');
+  const delay     = parseInt(document.getElementById('outbox-delay-input')?.value) || 65;
+  const maxLeads  = parseInt(document.getElementById('outbox-max-leads')?.value)  || 50;
+  const selAcc    = document.getElementById('outbox-account-select');
+  const accId     = selAcc?.value ? parseInt(selAcc.value) : null;
 
   const lead_ids = _selectedIds.size > 0
     ? _dragOrder.filter((id) => _selectedIds.has(id))
@@ -191,7 +239,7 @@ async function startSending() {
   btn.disabled  = true;
 
   try {
-    const body = { strategy: 'round_robin', delay_seconds: delay };
+    const body = { strategy: 'round_robin', delay_seconds: delay, daily_limit: maxLeads };
     if (lead_ids.length) body.lead_ids          = lead_ids;
     if (accId)           body.active_account_id  = accId;
 
@@ -379,3 +427,195 @@ async function _eedSendLead() {
   }
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DAILY LIMIT HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function _loadDailyLimit() {
+  try {
+    const s   = await settingsAPI.get();
+    const lim = s.daily_limit ?? s.batch_size ?? 50;
+    const inp = document.getElementById('outbox-max-leads');
+    if (inp && lim) inp.value = lim;
+  } catch (_) {}
+}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEAD DETAIL / TIMELINE DRAWER
+// ─────────────────────────────────────────────────────────────────────────────
+
+let _ltdCurrentLead = null;  // lead object currently open in detail drawer
+
+function openLeadDetailDrawer(leadSnapshot) {
+  _ltdCurrentLead = leadSnapshot;
+  _ltdRenderProfile(leadSnapshot);
+
+  const overlay = document.getElementById('lead-detail-overlay');
+  const drawer  = document.getElementById('lead-detail-drawer');
+  if (overlay) { overlay.style.display = 'block'; overlay.classList.add('open'); }
+  if (drawer)  { drawer.classList.add('open'); drawer.setAttribute('aria-hidden', 'false'); }
+
+  // Show spinner while fetching timeline
+  const timelineEl = document.getElementById('ltd-timeline');
+  if (timelineEl) timelineEl.innerHTML = `<div style="text-align:center;padding:24px;color:var(--muted);font-size:12px;"><span class="spinner spinner--sm"></span> Loading history…</div>`;
+
+  leadsAPI.timeline(leadSnapshot.id).then((r) => {
+    _ltdRenderTimeline(r.history || [], r.lead);
+  }).catch(() => {
+    const tl = document.getElementById('ltd-timeline');
+    if (tl) tl.innerHTML = `<p style="color:var(--danger);font-size:12px;padding:16px;">Could not load send history.</p>`;
+  });
+}
+
+function closeLeadDetailDrawer() {
+  const overlay = document.getElementById('lead-detail-overlay');
+  const drawer  = document.getElementById('lead-detail-drawer');
+  if (overlay) { overlay.style.display = 'none'; overlay.classList.remove('open'); }
+  if (drawer)  { drawer.classList.remove('open'); drawer.setAttribute('aria-hidden', 'true'); }
+  _ltdCurrentLead = null;
+}
+
+function _ltdRenderProfile(lead) {
+  // Avatar initials
+  const initials = ((lead.first_name?.[0] || '') + (lead.last_name?.[0] || '')).toUpperCase()
+    || lead.email[0].toUpperCase();
+  const av = document.getElementById('ltd-avatar');
+  if (av) av.textContent = initials;
+
+  // Name / sub
+  const fullName = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email;
+  const nameEl   = document.getElementById('ltd-name');
+  const subEl    = document.getElementById('ltd-sub');
+  if (nameEl) nameEl.textContent = fullName;
+  if (subEl)  subEl.textContent  = [lead.role, lead.company].filter(Boolean).join(' @ ');
+
+  // Status badge
+  const sb = document.getElementById('ltd-status-badge');
+  if (sb) { sb.className = `status-badge ${lead.status}`; sb.textContent = lead.status; }
+
+  // Error alert
+  const errBox = document.getElementById('ltd-error-box');
+  const errMsg = document.getElementById('ltd-error-msg');
+  if (lead.status === 'failed' && lead.last_error) {
+    if (errBox) errBox.style.display = '';
+    if (errMsg) errMsg.textContent   = lead.last_error;
+    document.getElementById('ltd-retry-btn')?.setAttribute('data-id', lead.id);
+    document.getElementById('ltd-craft-retry-btn')?.setAttribute('data-id', lead.id);
+  } else {
+    if (errBox) errBox.style.display = 'none';
+  }
+
+  // Profile grid
+  const profileEl = document.getElementById('ltd-profile');
+  if (!profileEl) return;
+  const fields = [
+    ['Email',      lead.email],
+    ['Company',    lead.company],
+    ['Role',       lead.role],
+    ['Location',   lead.location],
+    ['Industry',   lead.industry || lead.org_industry],
+    ['Employees',  lead.employees],
+    ['Seniority',  lead.seniority],
+    ['LinkedIn',   lead.linkedin ? `<a href="${esc(lead.linkedin)}" target="_blank" style="color:var(--brand);">View profile</a>` : ''],
+    ['Website',    lead.website  ? `<a href="${esc(lead.website)}"  target="_blank" style="color:var(--brand);">${esc(lead.website)}</a>`  : ''],
+    ['Phone',      lead.phone],
+    ['ICP Score',  lead.lead_score ? `<strong>${lead.lead_score}/100</strong>` : ''],
+    ['Added',      lead.created_at ? new Date(lead.created_at).toLocaleDateString() : ''],
+  ].filter(([, v]) => v);
+
+  profileEl.innerHTML = fields.map(([label, val]) => `
+    <div>
+      <div style="font-size:10px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">${label}</div>
+      <div style="font-size:12.5px;color:var(--text);word-break:break-word;">${val}</div>
+    </div>`).join('');
+}
+
+function _ltdRenderTimeline(history, lead) {
+  const tl      = document.getElementById('ltd-timeline');
+  const countEl = document.getElementById('ltd-history-count');
+  if (countEl) countEl.textContent = history.length ? `(${history.length} email${history.length > 1 ? 's' : ''})` : '';
+
+  // IDs section
+  const idsSection = document.getElementById('ltd-ids-section');
+  const idsEl      = document.getElementById('ltd-ids');
+  if (history.length && idsEl && idsSection) {
+    const latest = history[history.length - 1];
+    idsSection.style.display = '';
+    idsEl.innerHTML = [
+      latest.tracking_id  ? `<div><span style="color:var(--muted-2);">Tracking ID:</span> ${esc(latest.tracking_id)}</div>` : '',
+      latest.thread_id    ? `<div><span style="color:var(--muted-2);">Thread ID:</span>   ${esc(latest.thread_id)}</div>`   : '',
+      lead?.unsubscribe_token ? `<div><span style="color:var(--muted-2);">Unsub token:</span> ${esc(lead.unsubscribe_token)}</div>` : '',
+    ].filter(Boolean).join('');
+  } else if (idsSection) {
+    idsSection.style.display = 'none';
+  }
+
+  if (!history.length) {
+    if (tl) tl.innerHTML = `<div class="empty-state" style="padding:20px 0;"><p class="empty-state__text">No emails sent yet for this lead.</p></div>`;
+    return;
+  }
+
+  // Render git-graph-style vertical timeline
+  const items = history.map((c, idx) => {
+    const isFailed  = !!c.error_message;
+    const isOpened  = !!c.opened_at;
+    const stepLabel = c.sequence_step === 0 ? 'Initial Email' : `Follow-up #${c.sequence_step}`;
+    const dotColor  = isFailed ? '#be123c' : isOpened ? '#16a34a' : '#2563eb';
+    const dotIcon   = isFailed ? '✕' : isOpened ? '✓' : '→';
+    const sentDate  = c.sent_at ? new Date(c.sent_at).toLocaleString() : 'Pending';
+    const isLast    = idx === history.length - 1;
+
+    return `
+    <div style="display:flex;gap:0;position:relative;">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;width:32px;">
+        <div style="width:22px;height:22px;border-radius:50%;background:${dotColor};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;z-index:1;">${dotIcon}</div>
+        ${!isLast ? `<div style="width:2px;flex:1;background:var(--border);margin:2px 0;min-height:20px;"></div>` : ''}
+      </div>
+      <div style="flex:1;padding:0 0 20px 10px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+          <strong style="font-size:12.5px;">${esc(stepLabel)}</strong>
+          ${isOpened ? `<span style="font-size:10px;background:#dcfce7;color:#15803d;padding:2px 6px;border-radius:10px;font-weight:600;">👁 Opened${c.open_count > 1 ? ` ×${c.open_count}` : ''}</span>` : ''}
+          ${isFailed ? `<span style="font-size:10px;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:10px;font-weight:600;">✕ Failed</span>` : ''}
+        </div>
+        ${c.subject ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Subject: <em>${esc(c.subject)}</em></div>` : ''}
+        <div style="font-size:11px;color:var(--muted-2);">${sentDate}</div>
+        ${c.opened_at ? `<div style="font-size:11px;color:#16a34a;margin-top:2px;">Opened: ${new Date(c.opened_at).toLocaleString()}</div>` : ''}
+        ${isFailed    ? `<div style="font-size:11px;color:#dc2626;margin-top:4px;line-height:1.4;word-break:break-word;">Error: ${esc(c.error_message)}</div>` : ''}
+        <div style="font-size:10px;color:var(--muted-2);font-family:monospace;margin-top:4px;opacity:.7;">Campaign #${c.id} · ${esc(c.tracking_id?.slice(0,12))}…</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (tl) tl.innerHTML = `<div style="padding:16px 16px 4px;">${items}</div>`;
+}
+
+async function _ltdRetry() {
+  const id = _ltdCurrentLead?.id;
+  if (!id) return;
+  const btn = document.getElementById('ltd-retry-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Resetting…'; }
+  try {
+    await leadsAPI.retry(id);
+    toast('Lead reset to pending — draft cleared. Start Sending or Craft to resend.', 'success');
+    closeLeadDetailDrawer();
+    await loadOutbox();
+  } catch (e) {
+    toast('Retry failed: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '↺ Reset & Retry'; }
+  }
+}
+
+async function _ltdCraftRetry() {
+  const lead = _ltdCurrentLead;
+  if (!lead) return;
+  try {
+    await leadsAPI.retry(lead.id);
+    closeLeadDetailDrawer();
+    const name    = [lead.first_name, lead.last_name].filter(Boolean).join(' ') || lead.email;
+    openEmailDrawer(lead.id, name, lead.company || '');
+  } catch (e) {
+    toast('Could not reset lead: ' + e.message, 'error');
+  }
+}

@@ -8,8 +8,9 @@ from app.repositories.account_repository import account_repository
 from app.utils.email_engine import EmailEngine
 from app.utils.llm_client import generate_email
 from app.utils.prompt import build_email_prompt
-from app.utils.company import wrap_email_template
+from app.utils.company import wrap_email_template, render_custom_template
 from app.utils.payload_sanitizer import PayloadSanitizer, PayloadSanitizationError, PersonalizationError
+from app.utils.scoring import score_lead
 import re
 import random
 
@@ -52,7 +53,7 @@ class CampaignService:
                     accs = [a for a in accs if a.id in account_ids]
                     
                 email_engine = EmailEngine(
-                    [{"id": a.id, "email": a.email, "app_password": a.app_password,
+                    [{"id": a.id, "email": a.email, "app_password": a.get_decrypted_password(),
                       "provider": a.provider, "display_name": a.display_name} for a in accs],
                     strategy=cfg.get("send_strategy", "round_robin"),
                     batch_size=int(cfg.get("batch_size", 5)),
@@ -99,9 +100,11 @@ class CampaignService:
                             ).all()
 
                     # Dynamic prompt generation
-                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services)
+                    _style = cfg.get("email_style_instructions", "")
+                    _sample = cfg.get("sample_email_copy", "")
+                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services, _style, _sample)
                     sanitized_lead_data = PayloadSanitizer.truncate_context(lead_data, usr_p_temp, max_chars=4000)
-                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, services)
+                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, services, _style, _sample)
                     
                     pkg = None
                     for attempt in range(2):
@@ -144,9 +147,27 @@ class CampaignService:
                     else:
                         offices_str = str(offices_raw)
 
-                    # Replace static template wrapper with dynamic injects
-                    html_body = wrap_email_template(
-                        pkg["bodyHtml"],
+                    # Pre-create Campaign to get tracking_id before send
+                    with Session(engine) as session:
+                        lead_for_unsub = session.get(Lead, lead_id)
+                        pre_campaign = Campaign(
+                            lead_id=lead_id,
+                            subject=pkg["subject"],
+                            sequence_step=0,
+                        )
+                        session.add(pre_campaign)
+                        session.commit()
+                        session.refresh(pre_campaign)
+                        tracking_url   = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
+                        unsubscribe_url = (
+                            f"http://127.0.0.1:8008/api/unsubscribe/{lead_for_unsub.unsubscribe_token}"
+                            if lead_for_unsub else ""
+                        )
+                        campaign_id = pre_campaign.id
+
+                    # Build branded HTML wrapper — use custom template if configured
+                    _tpl_ctx = dict(
+                        inner_html=pkg["bodyHtml"],
                         sender_email="{{SENDER_EMAIL}}",
                         sender_name="{{SENDER_NAME}}",
                         sender_title=sender_title,
@@ -156,7 +177,14 @@ class CampaignService:
                         company_logo=org_logo,
                         company_website=org_web,
                         offices=offices_str,
+                        tracking_url=tracking_url,
+                        unsubscribe_url=unsubscribe_url,
                     )
+                    custom_tpl = (cfg.get("custom_email_template") or "").strip()
+                    if custom_tpl:
+                        html_body = render_custom_template(custom_tpl, **_tpl_ctx)
+                    else:
+                        html_body = wrap_email_template(**_tpl_ctx)
                     plain = CampaignService._html_to_plain(pkg["bodyHtml"])
 
                     results = await email_engine.send_batch(
@@ -168,23 +196,22 @@ class CampaignService:
 
                     with Session(engine) as session:
                         lead = session.get(Lead, lead_id)
+                        camp = session.get(Campaign, campaign_id)
                         if result["success"]:
                             lead.status = "sent"
-                            campaign = Campaign(
-                                lead_id=lead_id,
-                                subject=pkg["subject"],
-                                sent_at=datetime.now(timezone.utc).isoformat(),
-                            )
-                            session.add(campaign)
+                            lead.lead_score = score_lead(lead_data)
+                            lead.draft_subject = pkg["subject"]
+                            lead.draft_body = pkg["bodyHtml"]
+                            if camp:
+                                camp.sent_at = datetime.now(timezone.utc).isoformat()
                         else:
                             lead.status = "failed"
-                            campaign = Campaign(
-                                lead_id=lead_id,
-                                error_message=result.get("error", "Unknown error"),
-                                sent_at=datetime.now(timezone.utc).isoformat(),
-                            )
-                            session.add(campaign)
+                            if camp:
+                                camp.error_message = result.get("error", "Unknown error")
+                                camp.sent_at = datetime.now(timezone.utc).isoformat()
                         session.add(lead)
+                        if camp:
+                            session.add(camp)
                         session.commit()
 
                     status = "sent" if result["success"] else "failed"

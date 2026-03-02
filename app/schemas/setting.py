@@ -12,7 +12,11 @@ class SettingsIn(BaseModel):
     sender_name:      Optional[str] = None
     sender_title:     Optional[str] = None
     sender_email:     Optional[str] = None
-    llm_provider:     Optional[str] = None
-    openrouter_model: Optional[str] = None
-    send_strategy:    Optional[str] = None
-    batch_size:       Optional[int] = None
+    llm_provider:          Optional[str] = None
+    openrouter_model:      Optional[str] = None
+    send_strategy:         Optional[str] = None
+    batch_size:            Optional[int] = None
+    daily_limit:           Optional[int] = None   # max leads per campaign run
+    custom_email_template: Optional[str] = None   # full HTML with {{PLACEHOLDER}} tokens
+    email_style_instructions: Optional[str] = None  # user writing guide injected into prompt
+    sample_email_copy:     Optional[str] = None   # reference email for style matching

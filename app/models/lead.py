@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 from sqlmodel import Field
@@ -34,3 +35,8 @@ class Lead(Base, table=True):
     # AI-generated draft — editable before sending
     draft_subject: str = Field(default="")
     draft_body: str = Field(default="")
+    # Unsubscribe management
+    unsubscribe_token: str = Field(default_factory=lambda: uuid.uuid4().hex)
+    is_unsubscribed: bool = Field(default=False)
+    # ICP lead score (0-100)
+    lead_score: int = Field(default=0)

@@ -11,6 +11,7 @@ export const PAGE_META = {
   search:    'Find Leads',
   leads:     'All Leads',
   outbox:    'Send Emails',
+  sequences: 'Sequences',
   replies:   'Replies',
   inboxes:   'Sender Accounts',
   settings:  'Settings',

@@ -2,9 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlmodel import Session, select
 from app.api.dependencies import get_db_session
 from app.models.lead import Lead
+from app.models.campaign import Campaign
 from app.schemas.lead import LeadIn, ApolloQuery
 from app.services.lead_service import lead_service
 from app.utils.apollo_search import apollo_search as _apollo_search
+from app.utils.scoring import score_lead
 from app.core.config import settings
 from app.repositories.lead_repository import lead_repository
 import re
@@ -39,6 +41,8 @@ def _lead_to_dict(lead: Lead) -> dict:
         "draft_subject":   lead.draft_subject,
         "draft_body":      lead.draft_body,
         "created_at":      lead.created_at,
+        "lead_score":      getattr(lead, "lead_score", 0) or 0,
+        "is_unsubscribed": getattr(lead, "is_unsubscribed", False) or False,
     }
 
 
@@ -107,18 +111,33 @@ def _offices_to_str(offices) -> str:
 
 @router.get("/")
 def list_leads(session: Session = Depends(get_db_session)):
+    from sqlmodel import desc
     leads = lead_repository.get_all(session)
-    # Simple mapping without join for now
-    res = [_lead_to_dict(lead) for lead in leads]
-    return {"leads": res, "total": len(leads)}
+    # Fetch latest error + sent_at per lead from campaigns table
+    all_campaigns = session.exec(select(Campaign).order_by(desc(Campaign.id))).all()
+    error_map: dict = {}  # lead_id -> last error_message
+    sent_map:  dict = {}  # lead_id -> last sent_at
+    for c in all_campaigns:
+        if c.lead_id not in error_map:
+            error_map[c.lead_id] = c.error_message or ""
+        if c.lead_id not in sent_map:
+            sent_map[c.lead_id] = c.sent_at or ""
+    res = []
+    for lead in leads:
+        d = _lead_to_dict(lead)
+        d["last_error"] = error_map.get(lead.id, "")
+        d["last_sent_at"] = sent_map.get(lead.id, "")
+        res.append(d)
+    return {"leads": res, "total": len(res)}
 
 @router.post("/", status_code=201)
 def add_lead(body: LeadIn, session: Session = Depends(get_db_session)):
     existing = lead_repository.get_by_email(session, body.email)
     if existing:
         raise HTTPException(400, f"Lead {body.email} already exists")
-        
+
     lead = Lead(**body.model_dump())
+    lead.lead_score = score_lead(body.model_dump())
     lead = lead_repository.create(session, lead)
     return {"lead": _lead_to_dict(lead)}
 
@@ -191,7 +210,11 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
         )
 
     lead_data = _lead_to_dict(lead)
-    sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+    sys_p, usr_p = build_email_prompt(
+        lead_data, identity, services,
+        cfg.get("email_style_instructions", ""),
+        cfg.get("sample_email_copy", ""),
+    )
 
     try:
         pkg = await generate_email(sys_p, usr_p, providers=providers)
@@ -221,15 +244,55 @@ def save_lead_draft(lead_id: int, body: dict, session: Session = Depends(get_db_
     return {"status": "saved"}
 
 
+@router.get("/{lead_id}/timeline")
+def get_lead_timeline(lead_id: int, session: Session = Depends(get_db_session)):
+    """Return full lead profile + complete email send history for the lead."""
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    campaigns = session.exec(
+        select(Campaign).where(Campaign.lead_id == lead_id).order_by(Campaign.id)
+    ).all()
+    history = [{
+        "id":            c.id,
+        "subject":       c.subject or "",
+        "sent_at":       c.sent_at or "",
+        "error_message": c.error_message or "",
+        "tracking_id":   c.tracking_id or "",
+        "opened_at":     c.opened_at or "",
+        "open_count":    c.open_count or 0,
+        "sequence_step": c.sequence_step or 0,
+        "account_id":    c.account_id,
+        "thread_id":     c.thread_id or "",
+    } for c in campaigns]
+    lead_dict = _lead_to_dict(lead)
+    lead_dict["last_error"] = history[-1]["error_message"] if history else ""
+    lead_dict["last_sent_at"] = history[-1]["sent_at"] if history else ""
+    return {"lead": lead_dict, "history": history}
+
+
+@router.post("/{lead_id}/retry")
+def retry_failed_lead(lead_id: int, session: Session = Depends(get_db_session)):
+    """Reset a failed (or any) lead back to 'pending' so it can be re-sent."""
+    lead = lead_repository.get(session, lead_id)
+    if not lead:
+        raise HTTPException(404, "Lead not found")
+    lead.status        = "pending"
+    lead.draft_subject = ""
+    lead.draft_body    = ""
+    session.add(lead)
+    session.commit()
+    return {"status": "reset", "lead": _lead_to_dict(lead)}
+
+
 @router.post("/{lead_id}/send")
 async def send_single_lead(lead_id: int, session: Session = Depends(get_db_session)):
     """Send the saved draft for one lead. Generates fresh if no draft is stored."""
     from app.utils.prompt import build_email_prompt
     from app.utils.llm_client import generate_email
-    from app.utils.company import wrap_email_template
+    from app.utils.company import wrap_email_template, render_custom_template
     from app.utils.email_engine import EmailEngine
     from app.repositories.account_repository import account_repository
-    from app.models.campaign import Campaign
     from datetime import datetime, timezone
 
     lead = lead_repository.get(session, lead_id)
@@ -248,7 +311,11 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
             raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
         identity, services = _get_identity_and_services(session)
         lead_data = _lead_to_dict(lead)
-        sys_p, usr_p = build_email_prompt(lead_data, identity, services)
+        sys_p, usr_p = build_email_prompt(
+            lead_data, identity, services,
+            cfg.get("email_style_instructions", ""),
+            cfg.get("sample_email_copy", ""),
+        )
         try:
             pkg = await generate_email(sys_p, usr_p, providers=providers)
         except RuntimeError as exc:
@@ -262,10 +329,20 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         raise HTTPException(400, "No active email accounts configured")
     acc = accs[0]
 
-    # Wrap in branded template
+    # Wrap in branded template (custom or default)
     identity, _ = _get_identity_and_services(session)
-    html_body = wrap_email_template(
-        body_html_raw,
+
+    # Pre-create Campaign to get tracking_id
+    pre_campaign = Campaign(lead_id=lead_id, subject=subject, sequence_step=0)
+    session.add(pre_campaign)
+    session.commit()
+    session.refresh(pre_campaign)
+    tracking_url    = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
+    unsubscribe_url = f"http://127.0.0.1:8008/api/unsubscribe/{lead.unsubscribe_token}"
+    campaign_id     = pre_campaign.id
+
+    _tpl_ctx = dict(
+        inner_html=body_html_raw,
         sender_email=acc.email,
         sender_name=acc.display_name or acc.email.split("@")[0].title(),
         sender_title=getattr(identity, "sender_title", "") or cfg.get("sender_title", "Executive"),
@@ -275,11 +352,15 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         company_logo=getattr(identity, "logo_url", ""),
         company_website=getattr(identity, "website", ""),
         offices=_offices_to_str(getattr(identity, "offices", [])),
+        tracking_url=tracking_url,
+        unsubscribe_url=unsubscribe_url,
     )
+    custom_tpl = (cfg.get("custom_email_template") or "").strip()
+    html_body = render_custom_template(custom_tpl, **_tpl_ctx) if custom_tpl else wrap_email_template(**_tpl_ctx)
     plain = re.sub(r"<[^>]+>", " ", body_html_raw).strip()
 
     engine = EmailEngine(
-        [{"id": acc.id, "email": acc.email, "app_password": acc.app_password,
+        [{"id": acc.id, "email": acc.email, "app_password": acc.get_decrypted_password(),
           "provider": acc.provider, "display_name": acc.display_name}],
         strategy="round_robin",
     )
@@ -290,15 +371,17 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     )
     result = results[0]
 
+    camp = session.get(Campaign, campaign_id)
     lead.status = "sent" if result["success"] else "failed"
-    campaign = Campaign(
-        lead_id=lead_id,
-        subject=subject,
-        sent_at=datetime.now(timezone.utc).isoformat(),
-        error_message="" if result["success"] else result.get("error", ""),
-    )
+    lead.lead_score = score_lead(_lead_to_dict(lead))
+    if camp:
+        if result["success"]:
+            camp.sent_at = datetime.now(timezone.utc).isoformat()
+        else:
+            camp.error_message = result.get("error", "")
+            camp.sent_at = datetime.now(timezone.utc).isoformat()
+        session.add(camp)
     session.add(lead)
-    session.add(campaign)
     session.commit()
 
     if result["success"]:

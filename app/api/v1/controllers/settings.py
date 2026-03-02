@@ -40,6 +40,10 @@ def get_settings(session: Session = Depends(get_db_session)):
         "openrouter_model": overrides.get("openrouter_model", ""),
         "send_strategy":   overrides.get("send_strategy", "round_robin"),
         "batch_size":      int(overrides.get("batch_size", 5)),
+        "daily_limit":     int(overrides.get("daily_limit", 50)),
+        "custom_email_template": overrides.get("custom_email_template", ""),
+        "email_style_instructions": overrides.get("email_style_instructions", ""),
+        "sample_email_copy":     overrides.get("sample_email_copy", ""),
         "calendar_url":    overrides.get("calendar_url", ""),
         "sender_name":     overrides.get("sender_name", ""),
         "sender_title":    overrides.get("sender_title", ""),
@@ -55,7 +59,7 @@ def update_settings(body: SettingsIn, session: Session = Depends(get_db_session)
         # llm_providers arrives as list[dict] — serialise to JSON for storage
         if k == "llm_providers":
             v = json.dumps(v)
-        elif k == "batch_size":
+        elif k in ("batch_size", "daily_limit"):
             v = str(int(v))
         else:
             v = str(v).strip()
