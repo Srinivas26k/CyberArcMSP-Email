@@ -247,7 +247,6 @@ def save_lead_draft(lead_id: int, body: dict, session: Session = Depends(get_db_
 @router.get("/{lead_id}/timeline")
 def get_lead_timeline(lead_id: int, session: Session = Depends(get_db_session)):
     """Return full lead profile + complete email send history for the lead."""
-    from sqlmodel import desc
     lead = lead_repository.get(session, lead_id)
     if not lead:
         raise HTTPException(404, "Lead not found")

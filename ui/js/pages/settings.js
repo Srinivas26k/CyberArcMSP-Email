@@ -360,10 +360,10 @@ function updateProviderHint(provider) {
 
   const hints = {
     resend:  { label: 'Resend API Key (starts with re_)', ph: 're_xxxx…',            html: '⚡ Get at <a href="https://resend.com/api-keys" target="_blank">resend.com/api-keys</a>. Verify your sender domain for best deliverability.' },
-    gmail:   { label: 'Gmail App Password (16 chars)',    ph: 'xxxx xxxx xxxx xxxx', html: '📧 Get at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a>. Requires 2FA enabled.' },
-    m365:    { label: 'M365 App Password (16 chars)',     ph: 'xxxx xxxx xxxx xxxx', html: '🏢 Microsoft 365 uses <strong>smtp.office365.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank">mysignins.microsoft.com</a>.' },
-    outlook: { label: 'Outlook App Password (16 chars)',  ph: 'xxxx xxxx xxxx xxxx', html: '📬 Outlook Personal uses <strong>smtp-mail.outlook.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank">mysignins.microsoft.com</a>.' },
-    smtp:    { label: 'SMTP Password',                   ph: 'your SMTP password',   html: '⚙️ Provide your SMTP server password. Make sure SMTP/SSL is enabled on your mail host.' },
+    gmail:   { label: 'Gmail App Password (16 chars)',    ph: 'xxxx xxxx xxxx xxxx', html: 'Get at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a>. Requires 2FA enabled.' },
+    m365:    { label: 'M365 App Password (16 chars)',     ph: 'xxxx xxxx xxxx xxxx', html: 'Microsoft 365 uses <strong>smtp.office365.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank">mysignins.microsoft.com</a>.' },
+    outlook: { label: 'Outlook App Password (16 chars)',  ph: 'xxxx xxxx xxxx xxxx', html: 'Outlook Personal uses <strong>smtp-mail.outlook.com:587</strong>. Get App Password at <a href="https://mysignins.microsoft.com/security-info" target="_blank">mysignins.microsoft.com</a>.' },
+    smtp:    { label: 'SMTP Password',                   ph: 'your SMTP password',   html: 'Provide your SMTP server password. Make sure SMTP/SSL is enabled on your mail host.' },
   };
   const h = hints[provider] || hints.outlook;
   if (passInp) passInp.placeholder = h.ph;

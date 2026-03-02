@@ -217,7 +217,7 @@ async function populateAccountSelect() {
   if (!sel) return;
   try {
     const r = await accountsAPI.list();
-    sel.innerHTML = '<option value="">🔄 Round-Robin (auto-cycle all accounts)</option>' +
+    sel.innerHTML = '<option value="">↻ Round-Robin (auto-cycle all accounts)</option>' +
       (r.accounts || []).map((a) =>
         `<option value="${a.id}">${esc(a.display_name || a.email)} &lt;${esc(a.email)}&gt;</option>`
       ).join('');
@@ -511,18 +511,18 @@ function _ltdRenderProfile(lead) {
   const profileEl = document.getElementById('ltd-profile');
   if (!profileEl) return;
   const fields = [
-    ['📧 Email',    lead.email],
-    ['🏢 Company',  lead.company],
-    ['💼 Role',     lead.role],
-    ['🌍 Location', lead.location],
-    ['📊 Industry', lead.industry || lead.org_industry],
-    ['👥 Employees',lead.employees],
-    ['💼 Seniority',lead.seniority],
-    ['🔗 LinkedIn', lead.linkedin ? `<a href="${esc(lead.linkedin)}" target="_blank" style="color:var(--brand);">View profile</a>` : ''],
-    ['🌐 Website',  lead.website  ? `<a href="${esc(lead.website)}"  target="_blank" style="color:var(--brand);">${esc(lead.website)}</a>`  : ''],
-    ['📞 Phone',    lead.phone],
-    ['🎯 ICP Score',lead.lead_score ? `<strong>${lead.lead_score}/100</strong>` : ''],
-    ['🗓 Added',    lead.created_at ? new Date(lead.created_at).toLocaleDateString() : ''],
+    ['Email',      lead.email],
+    ['Company',    lead.company],
+    ['Role',       lead.role],
+    ['Location',   lead.location],
+    ['Industry',   lead.industry || lead.org_industry],
+    ['Employees',  lead.employees],
+    ['Seniority',  lead.seniority],
+    ['LinkedIn',   lead.linkedin ? `<a href="${esc(lead.linkedin)}" target="_blank" style="color:var(--brand);">View profile</a>` : ''],
+    ['Website',    lead.website  ? `<a href="${esc(lead.website)}"  target="_blank" style="color:var(--brand);">${esc(lead.website)}</a>`  : ''],
+    ['Phone',      lead.phone],
+    ['ICP Score',  lead.lead_score ? `<strong>${lead.lead_score}/100</strong>` : ''],
+    ['Added',      lead.created_at ? new Date(lead.created_at).toLocaleDateString() : ''],
   ].filter(([, v]) => v);
 
   profileEl.innerHTML = fields.map(([label, val]) => `

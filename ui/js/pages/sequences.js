@@ -77,7 +77,7 @@ function _renderList() {
 
   if (!_sequences.length) {
     body.innerHTML = `<div class="empty-state">
-      <div class="empty-state__icon">🔄</div>
+      <div class="empty-state__icon"><svg class="icon" aria-hidden="true" width="40" height="40"><use href="#icon-refresh"/></svg></div>
       <p class="empty-state__text">No sequences yet. Create one to start automated follow-ups.</p>
     </div>`;
     return;
@@ -175,12 +175,12 @@ function _addStep(step = {}) {
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
       <label style="margin:0;">
-        ✍️ AI Instructions
+        AI Instructions
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">what angle / tone to use</span>
         <textarea class="step-instructions" rows="4" placeholder="e.g. Short 2-line follow-up. Mention their industry pain point. Be direct, no fluff.">${_esc(step.instructions || '')}</textarea>
       </label>
       <label style="margin:0;">
-        📧 Sample Email
+        Sample Email
         <span style="font-size:11px;color:var(--muted);margin-left:4px;">AI mirrors this style</span>
         <textarea class="step-sample" rows="4" placeholder="Paste a real follow-up email you like. The AI will match its length, tone and structure — not copy the content.">${_esc(step.sample_email || '')}</textarea>
       </label>
