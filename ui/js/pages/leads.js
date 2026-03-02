@@ -48,7 +48,7 @@ export async function loadLeads() {
     if (navBadge)   { navBadge.textContent = leads.length; navBadge.style.display = leads.length ? '' : 'none'; }
 
     if (!leads.length) {
-      wrap.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-state__icon">👥</div><p class="empty-state__text">No leads yet — search Apollo or upload a CSV to get started.</p></div>`;
+      wrap.innerHTML = `<div class="empty-state" style="padding:40px 0;"><div class="empty-state__icon"><svg class="icon" aria-hidden="true" width="40" height="40"><use href="#icon-users"/></svg></div><p class="empty-state__text">No leads yet — search Apollo or upload a CSV to get started.</p></div>`;
       return;
     }
 
@@ -76,7 +76,7 @@ function _renderTable(leads) {
           ${leads.map((l) => {
             const score = l.lead_score ?? 0;
             const scoreColor = score >= 70 ? '#27ae60' : score >= 40 ? '#f39c12' : '#95a5a6';
-            const scoreLabel = score >= 70 ? '🔥' : score >= 40 ? '⭐' : '';
+            const scoreDot = score >= 70 ? '●' : score >= 40 ? '◐' : '○';
             return `
             <tr data-id="${l.id}" class="lead-row">
               <td><input type="checkbox" class="lead-chk" data-id="${l.id}" style="cursor:pointer;" /></td>
@@ -85,7 +85,7 @@ function _renderTable(leads) {
               <td>${esc(l.company || '—')}</td>
               <td class="td--muted">${esc(l.role || '—')}</td>
               <td class="td--muted">${esc(l.location || '—')}</td>
-              <td><span style="font-weight:700;color:${scoreColor};">${scoreLabel} ${score}</span></td>
+              <td><span style="font-weight:700;color:${scoreColor};">${scoreDot} ${score}</span></td>
               <td><span class="status-badge ${esc(l.status)}">${esc(l.status)}</span></td>
             </tr>`;
           }).join('')}
