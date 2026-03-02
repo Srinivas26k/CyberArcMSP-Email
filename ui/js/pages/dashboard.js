@@ -75,12 +75,31 @@ export async function loadStats() {
     }
 
     // ── Stat card sub-text ────────────────────────────────────
-    const replied   = s.replied ?? 0;
-    const replyRate = sent > 0 ? Math.round((replied / sent) * 100) : 0;
+    const replied      = s.replied       ?? 0;
+    const opened       = s.opened        ?? 0;
+    const openRate     = s.open_rate     ?? 0;
+    const unsubscribed = s.unsubscribed  ?? 0;
+    const seqActive    = s.seq_active    ?? 0;
+    const replyRate    = sent > 0 ? Math.round((replied / sent) * 100) : 0;
+
     setText('s-leads-sub',   pending > 0 ? `${pending} pending outreach` : 'in database');
     setText('s-sent-sub',    failed  > 0 ? `${failed} failed` : 'all delivered');
-    setText('s-replies-sub', sent    > 0 ? `${replyRate}% reply rate` : 'no sends yet');
-    setText('s-inboxes-sub', 'sending accounts');
+    setText('s-opens',       `${openRate}%`);
+    setText('s-opens-sub',   sent > 0 ? `${opened} unique opens` : 'no sends yet');
+    setText('s-replies-sub', sent > 0 ? `${replyRate}% reply rate` : 'no sends yet');
+
+    // Secondary stat cards
+    setText('s-inboxes',   String(h.active_accounts ?? 0));
+    setText('s-sequences', String(seqActive));
+    setText('s-unsub',     String(unsubscribed));
+    setText('s-failed',    String(failed));
+
+    // Update seq nav badge
+    const seqBadge = document.getElementById('seq-badge');
+    if (seqBadge) {
+      seqBadge.textContent = seqActive;
+      seqBadge.style.display = seqActive > 0 ? '' : 'none';
+    }
 
     // ── System health panel ──────────────────────────────────
     _setHealthBadge('d-server-badge', 'Online', 'sent');

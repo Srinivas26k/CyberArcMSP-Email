@@ -58,25 +58,68 @@ def _migrate_db():
     exist in the SQLite database.  Safe to run on every startup.
     """
     import sqlite3
+    import secrets
 
-    new_columns = [
-        ("headline",        "TEXT NOT NULL DEFAULT ''"),
-        ("twitter",         "TEXT NOT NULL DEFAULT ''"),
-        ("phone",           "TEXT NOT NULL DEFAULT ''"),
-        ("departments",     "TEXT NOT NULL DEFAULT ''"),
-        ("org_industry",    "TEXT NOT NULL DEFAULT ''"),
-        ("org_founded",     "TEXT NOT NULL DEFAULT ''"),
-        ("org_description", "TEXT NOT NULL DEFAULT ''"),
-        ("org_funding",     "TEXT NOT NULL DEFAULT ''"),
-        ("org_tech_stack",  "TEXT NOT NULL DEFAULT ''"),
-        ("draft_subject",   "TEXT NOT NULL DEFAULT ''"),
-        ("draft_body",      "TEXT NOT NULL DEFAULT ''"),
+    # ── Lead columns ─────────────────────────────────────────────────────────
+    lead_columns = [
+        ("headline",           "TEXT NOT NULL DEFAULT ''"),
+        ("twitter",            "TEXT NOT NULL DEFAULT ''"),
+        ("phone",              "TEXT NOT NULL DEFAULT ''"),
+        ("departments",        "TEXT NOT NULL DEFAULT ''"),
+        ("org_industry",       "TEXT NOT NULL DEFAULT ''"),
+        ("org_founded",        "TEXT NOT NULL DEFAULT ''"),
+        ("org_description",    "TEXT NOT NULL DEFAULT ''"),
+        ("org_funding",        "TEXT NOT NULL DEFAULT ''"),
+        ("org_tech_stack",     "TEXT NOT NULL DEFAULT ''"),
+        ("draft_subject",      "TEXT NOT NULL DEFAULT ''"),
+        ("draft_body",         "TEXT NOT NULL DEFAULT ''"),
+        ("unsubscribe_token",  "TEXT NOT NULL DEFAULT ''"),
+        ("is_unsubscribed",    "INTEGER NOT NULL DEFAULT 0"),
+        ("lead_score",         "INTEGER NOT NULL DEFAULT 0"),
+    ]
+
+    # ── Campaign columns ──────────────────────────────────────────────────────
+    campaign_columns = [
+        ("tracking_id",    "TEXT NOT NULL DEFAULT ''"),
+        ("opened_at",      "TEXT"),
+        ("open_count",     "INTEGER NOT NULL DEFAULT 0"),
+        ("sequence_step",  "INTEGER NOT NULL DEFAULT 0"),
     ]
 
     with sqlite3.connect(_DB_PATH) as con:
+        # Lead migrations
         cur = con.execute("PRAGMA table_info(lead)")
-        existing = {row[1] for row in cur.fetchall()}
-        for col_name, col_def in new_columns:
-            if col_name not in existing:
+        existing_lead = {row[1] for row in cur.fetchall()}
+        for col_name, col_def in lead_columns:
+            if col_name not in existing_lead:
                 con.execute(f"ALTER TABLE lead ADD COLUMN {col_name} {col_def}")
+
+        # Back-fill unsubscribe_token for any existing leads that have none
+        con.execute(
+            "SELECT id FROM lead WHERE unsubscribe_token = '' OR unsubscribe_token IS NULL"
+        )
+        for (lid,) in con.execute(
+            "SELECT id FROM lead WHERE unsubscribe_token = '' OR unsubscribe_token IS NULL"
+        ).fetchall():
+            con.execute(
+                "UPDATE lead SET unsubscribe_token = ? WHERE id = ?",
+                (secrets.token_hex(16), lid),
+            )
+
+        # Campaign migrations
+        cur = con.execute("PRAGMA table_info(campaign)")
+        existing_campaign = {row[1] for row in cur.fetchall()}
+        for col_name, col_def in campaign_columns:
+            if col_name not in existing_campaign:
+                con.execute(f"ALTER TABLE campaign ADD COLUMN {col_name} {col_def}")
+
+        # Back-fill tracking_id for existing campaigns
+        for (cid,) in con.execute(
+            "SELECT id FROM campaign WHERE tracking_id = '' OR tracking_id IS NULL"
+        ).fetchall():
+            con.execute(
+                "UPDATE campaign SET tracking_id = ? WHERE id = ?",
+                (secrets.token_hex(16), cid),
+            )
+
         con.commit()

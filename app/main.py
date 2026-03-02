@@ -45,7 +45,28 @@ async def lifespan(app: FastAPI):
     _migrate_legacy_db_if_needed()
     db.init_db()
     logger.info("✅ CA MSP AI Outreach started (Industrial Framework)")
+
+    # Background task: process sequence follow-ups every 10 minutes
+    async def _sequence_scheduler():
+        while True:
+            await asyncio.sleep(600)  # 10 minutes
+            try:
+                from app.services.sequence_service import process_due_enrollments
+                sent = await process_due_enrollments()
+                if sent:
+                    await sse.broadcast("stat", {"refresh": True})
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                logger.error("Sequence scheduler error: %s", exc)
+
+    sched_task = asyncio.create_task(_sequence_scheduler())
     yield
+    sched_task.cancel()
+    try:
+        await sched_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Shutting down…")
 
 app = FastAPI(title="CA MSP AI Outreach", version="2.1.1", lifespan=lifespan)

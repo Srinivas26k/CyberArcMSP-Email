@@ -4,6 +4,7 @@ from app.models.lead import Lead
 from app.models.campaign import Campaign
 from app.models.reply import Reply
 from app.models.setting import Setting
+from app.models.sequence import SequenceTemplate, SequenceEnrollment
 
 __all__ = [
     "Base",
@@ -12,4 +13,6 @@ __all__ = [
     "Campaign",
     "Reply",
     "Setting",
+    "SequenceTemplate",
+    "SequenceEnrollment",
 ]
