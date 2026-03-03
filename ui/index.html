@@ -360,7 +360,8 @@
             <label>Keywords (optional)<input type="text" id="keywords-input" placeholder="e.g. SaaS, B2B, Series A" /></label>
             <label>Company Size
               <select id="company-size-select">
-                <option value="all">100+ employees (all sizes)</option>
+                <option value="all">100+ employees (all established sizes)</option>
+                <option value="1,100">1 – 100 (Startup)</option>
                 <option value="101,250">100 – 250</option>
                 <option value="251,500">251 – 500</option>
                 <option value="501,1000">501 – 1,000</option>
@@ -478,7 +479,19 @@
         </div>
       </div>
       <div class="panel">
-        <div class="panel__header"><span>Queue</span><span class="badge badge--secondary" id="outbox-count-badge">0 pending</span></div>
+        <div class="panel__header">
+          <span>Queue</span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="badge badge--secondary" id="outbox-count-badge">0 pending</span>
+            <select id="outbox-sort-select" title="Sort queue" style="font-size:12px;padding:3px 8px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);cursor:pointer;">
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="pending">Pending First</option>
+              <option value="failed">Failed First</option>
+              <option value="email">By Email A–Z</option>
+            </select>
+          </div>
+        </div>
         <div id="outbox-list-body">
           <div class="empty-state"><div class="empty-state__icon">📬</div><p class="empty-state__text">No leads in queue. Import leads to begin.</p></div>
         </div>

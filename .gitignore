@@ -15,6 +15,9 @@ bundled-python/
 
 .env
 
+# Build+send script credentials (NEVER commit)
+scripts/.build_send.env
+
 node_modules
 database.db
 .env

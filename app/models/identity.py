@@ -1,8 +1,16 @@
 import os
-import srvdb
+import json
 from sqlmodel import SQLModel, Field
 from typing import Optional, Dict, Any, List
-import json
+
+# srvdb is a Rust-compiled extension — not available on Windows yet.
+# All call-sites already have try/except, so we degrade gracefully.
+try:
+    import srvdb as _srvdb_mod
+    SRVDB_AVAILABLE = True
+except ImportError:
+    _srvdb_mod = None          # type: ignore[assignment]
+    SRVDB_AVAILABLE = False
 
 class IdentityProfile(SQLModel, table=True):
     """
@@ -63,19 +71,26 @@ class KnowledgeBase(SQLModel, table=True):
 # SrvDB Integration Layer
 # ==========================================
 
-def get_srvdb_instance() -> srvdb.SrvDBPython:
+def get_srvdb_instance():
     """
     Initializes a local SrvDB instance in the AppData directory.
-    Uses 1536 dimensions (OpenAI ada-002 standard) or local MiniLM dimensions (384)
-    depending on the embedding model choice later. We default to 384 for fast local embeddings.
+    Returns None (with a warning) if the srvdb Rust extension is unavailable
+    (e.g. on Windows before a native binary is compiled).
     """
+    if not SRVDB_AVAILABLE:
+        import logging
+        logging.getLogger(__name__).warning(
+            "srvdb not available on this platform — vector DB features disabled."
+        )
+        return None
+
     app_data_dir = os.environ.get("APP_DATA_DIR", "").strip()
     if not app_data_dir:
         app_data_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
     srvdb_path = os.path.join(app_data_dir, "data", "srvdb_store")
     os.makedirs(srvdb_path, exist_ok=True)
-    
-    # Initialize SrvDB (using dimension 384 assuming a fast local embedding model like all-MiniLM-L6-v2)
-    db = srvdb.SrvDBPython(srvdb_path, dimension=384)
+
+    # Initialize SrvDB (dimension 384 → all-MiniLM-L6-v2 compatible)
+    db = _srvdb_mod.SrvDBPython(srvdb_path, dimension=384)
     return db

@@ -163,7 +163,8 @@ def delete_all_leads(session: Session = Depends(get_db_session)):
 
 @router.post("/apollo/search")
 async def search_apollo(q: ApolloQuery, session: Session = Depends(get_db_session)):
-    key = settings.apollo_api_key
+    cfg = _load_cfg(session)
+    key = cfg.get("apollo_key")
     if not key:
         raise HTTPException(400, "Apollo API key not configured. Set it in Settings.")
 
@@ -178,6 +179,26 @@ async def search_apollo(q: ApolloQuery, session: Session = Depends(get_db_sessio
         )
     except RuntimeError as exc:
         raise HTTPException(400, str(exc))
+
+    # Persist new leads; skip duplicates
+    added = 0
+    skipped = 0
+    for lead_data in results:
+        existing = lead_repository.get_by_email(session, lead_data["email"])
+        if existing:
+            skipped += 1
+            continue
+        lead = Lead(**{k: v for k, v in lead_data.items() if hasattr(Lead, k)})
+        lead.lead_score = score_lead(lead_data)
+        lead_repository.create(session, lead)
+        added += 1
+
+    return {
+        "leads":        results,
+        "added":        added,
+        "skipped":      skipped,
+        "credits_used": credits_used,
+    }
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,12 +268,19 @@ def save_lead_draft(lead_id: int, body: dict, session: Session = Depends(get_db_
 @router.get("/{lead_id}/timeline")
 def get_lead_timeline(lead_id: int, session: Session = Depends(get_db_session)):
     """Return full lead profile + complete email send history for the lead."""
+    from app.models.email_account import EmailAccount
     lead = lead_repository.get(session, lead_id)
     if not lead:
         raise HTTPException(404, "Lead not found")
     campaigns = session.exec(
         select(Campaign).where(Campaign.lead_id == lead_id).order_by(Campaign.id)
     ).all()
+    # Build account_id → email map so each history item can show who sent it
+    account_ids = {c.account_id for c in campaigns if c.account_id}
+    account_map: dict = {}
+    if account_ids:
+        accounts = session.exec(select(EmailAccount).where(EmailAccount.id.in_(account_ids))).all()
+        account_map = {a.id: (a.display_name or a.email, a.email) for a in accounts}
     history = [{
         "id":            c.id,
         "subject":       c.subject or "",
@@ -263,6 +291,8 @@ def get_lead_timeline(lead_id: int, session: Session = Depends(get_db_session)):
         "open_count":    c.open_count or 0,
         "sequence_step": c.sequence_step or 0,
         "account_id":    c.account_id,
+        "sent_from_name": account_map.get(c.account_id, ("", ""))[0] if c.account_id else "",
+        "sent_from_email": account_map.get(c.account_id, ("", ""))[1] if c.account_id else "",
         "thread_id":     c.thread_id or "",
     } for c in campaigns]
     lead_dict = _lead_to_dict(lead)

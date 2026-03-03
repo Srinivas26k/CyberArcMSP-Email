@@ -10,6 +10,7 @@ let _sortable     = null;
 let _dragOrder    = [];
 let _running      = false;
 let _emailDrawerLeadId = null;   // lead currently open in email editor drawer
+let _outboxSort   = 'newest';    // 'newest' | 'oldest' | 'pending' | 'failed' | 'email'
 
 export const isCampaignRunning = () => _running;
 
@@ -17,6 +18,10 @@ export function init(register) {
   document.getElementById('start-campaign-btn')?.addEventListener('click',  startSending);
   document.getElementById('stop-campaign-btn')?.addEventListener('click',   stopCampaign);
   document.getElementById('outbox-select-all')?.addEventListener('change', (e) => toggleAll(e.target.checked));
+  document.getElementById('outbox-sort-select')?.addEventListener('change', (e) => {
+    _outboxSort = e.target.value;
+    loadOutbox();
+  });
 
   // Email editor drawer
   document.getElementById('eed-close')?.addEventListener('click',    closeEmailDrawer);
@@ -52,13 +57,44 @@ export function init(register) {
   });
 }
 
+function _sortLeads(leads) {
+  const STATUS_ORDER = { pending: 0, failed: 1, sent: 2 };
+  return [...leads].sort((a, b) => {
+    switch (_outboxSort) {
+      case 'newest': {
+        // Leads with no sent date bubble to the top so pending leads stay visible
+        if (!a.last_sent_at && !b.last_sent_at) return 0;
+        if (!a.last_sent_at) return -1;
+        if (!b.last_sent_at) return  1;
+        return b.last_sent_at.localeCompare(a.last_sent_at);
+      }
+      case 'oldest': {
+        if (!a.last_sent_at && !b.last_sent_at) return 0;
+        if (!a.last_sent_at) return  1;
+        if (!b.last_sent_at) return -1;
+        return a.last_sent_at.localeCompare(b.last_sent_at);
+      }
+      case 'pending':
+        return (STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+      case 'failed': {
+        const FAIL_ORDER = { failed: 0, pending: 1, sent: 2 };
+        return (FAIL_ORDER[a.status] ?? 9) - (FAIL_ORDER[b.status] ?? 9);
+      }
+      case 'email':
+        return (a.email || '').localeCompare(b.email || '');
+      default:
+        return 0;
+    }
+  });
+}
+
 async function loadOutbox() {
   const wrap = document.getElementById('outbox-list-body');
   if (!wrap) return;
 
   try {
     const r     = await leadsAPI.list();
-    const leads = r.leads || [];
+    const leads = _sortLeads(r.leads || []);
     const badge   = document.getElementById('outbox-count-badge');
     const pending = leads.filter((l) => l.status === 'pending').length;
     if (badge) badge.textContent = `${pending} pending`;
@@ -580,6 +616,7 @@ function _ltdRenderTimeline(history, lead) {
           ${isFailed ? `<span style="font-size:10px;background:#fef2f2;color:#dc2626;padding:2px 6px;border-radius:10px;font-weight:600;">✕ Failed</span>` : ''}
         </div>
         ${c.subject ? `<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">Subject: <em>${esc(c.subject)}</em></div>` : ''}
+        ${c.sent_from_email ? `<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">Sent from: <strong style="color:var(--text);">${esc(c.sent_from_name || c.sent_from_email)}</strong> &lt;${esc(c.sent_from_email)}&gt;</div>` : ''}
         <div style="font-size:11px;color:var(--muted-2);">${sentDate}</div>
         ${c.opened_at ? `<div style="font-size:11px;color:#16a34a;margin-top:2px;">Opened: ${new Date(c.opened_at).toLocaleString()}</div>` : ''}
         ${isFailed    ? `<div style="font-size:11px;color:#dc2626;margin-top:4px;line-height:1.4;word-break:break-word;">Error: ${esc(c.error_message)}</div>` : ''}

@@ -265,7 +265,17 @@ class SMTPAccount:
                     except Exception as e:
                         logger.warning(f"IMAP parse error for msg {mid}: {e}")
         except Exception as exc:
-            logger.warning(f"IMAP error for {self.email}: {exc}")
+            hint = ""
+            exc_str = str(exc)
+            if "LOGIN failed" in exc_str or "login failed" in exc_str.lower():
+                hint = (
+                    " — Microsoft 365 has disabled Basic Auth since Oct 2022. "
+                    "Ensure an App Password is configured or SMTP AUTH is enabled "
+                    "for this account in the M365 Admin Center."
+                )
+            elif "AUTHENTICATE failed" in exc_str:
+                hint = " — Check that IMAP is enabled for this account in Gmail/M365 settings."
+            logger.warning(f"IMAP reply-check failed for {self.email}: {exc_str}{hint}")
         return replies
 
 

@@ -99,13 +99,45 @@ _provider_sems: dict[str, asyncio.Semaphore] = {
 
 def _extract_json(raw: str) -> dict:
     """Strip markdown fences, think-tags, find the outermost {...}, parse JSON."""
-    # Reasoning models (Qwen3, DeepSeek-R1) wrap thinking in <think>...</think>
+    # Step 1: strip complete <think>...</think> blocks (Qwen3, DeepSeek-R1, etc.)
     raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+
+    # Step 2: handle unclosed <think> tags — the model emitted thinking but never
+    # closed the block and may or may not have produced JSON after it.
+    if "<think>" in raw:
+        # Try to find JSON that lives AFTER the unclosed thinking preamble.
+        # Scan for the first '{' that, together with the matching last '}', parses
+        # as valid JSON.  If none found, the model only produced thinking — we'll
+        # raise a clear error below.
+        candidate = raw[raw.find("<think>") + len("<think>"):]
+        # Walk forward through every '{' until we get a parseable object.
+        offset = 0
+        raw = ""   # will remain empty if nothing parses
+        while True:
+            idx = candidate.find("{", offset)
+            if idx == -1:
+                break
+            end_idx = candidate.rfind("}")
+            if end_idx == -1 or end_idx < idx:
+                break
+            chunk = candidate[idx:end_idx + 1]
+            try:
+                json.loads(chunk, strict=False)
+                raw = chunk   # valid JSON found
+                break
+            except json.JSONDecodeError:
+                offset = idx + 1   # skip this '{' and try the next one
+
+    # Step 3: strip code fences that some models add around the JSON block
     raw = re.sub(r"```json|```", "", raw).strip()
+
     start = raw.find("{")
     end   = raw.rfind("}")
     if start == -1 or end == -1:
-        raise ValueError(f"No JSON object found in LLM output: {raw[:200]}")
+        raise ValueError(
+            f"LLM returned thinking content only — no JSON produced. "
+            f"Try a non-reasoning model or a shorter prompt. Output: {raw[:200]}"
+        )
     return json.loads(raw[start:end + 1], strict=False)
 
 
@@ -145,8 +177,12 @@ async def _call_openai_compat(
                                 {"role": "system", "content": system},
                                 {"role": "user",   "content": user},
                             ],
-                            "temperature": 0.65,
-                            "max_tokens":  1500,
+                            "temperature":   0.65,
+                            "max_tokens":    1500,
+                            # Force pure JSON output — this also disables <think>
+                            # reasoning blocks on Groq (Qwen3) and OpenAI models.
+                            # Providers that don't support this silently ignore it.
+                            "response_format": {"type": "json_object"},
                         },
                     )
                 if r.status_code == 429:
