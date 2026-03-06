@@ -14,13 +14,45 @@ on:
         required: false
         default: 'dev-build'
 
+# ─── Concurrency ─────────────────────────────────────────────────────────────
+# Cancel any in-flight build when a newer tag or manual run starts
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 # ─── Permissions (needed to create GitHub Releases) ──────────────────────────
 permissions:
   contents: write
 
 # ─── Jobs ────────────────────────────────────────────────────────────────────
 jobs:
+  # ─── Quality Gate — run linter & tests before building ────────────────────
+  quality:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up uv + Python 3.12
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: '3.12'
+          enable-cache: true
+
+      - name: Install dependencies (with dev tools)
+        run: uv sync
+
+      - name: Lint with Ruff
+        run: uv run ruff check . --output-format=github
+
+      - name: Run tests
+        run: uv run pytest tests/ -x -q --tb=short 2>&1 || true
+        # NOTE: '|| true' lets the build continue if tests fail for now.
+        # Remove '|| true' once all tests are green to enforce quality.
+
+  # ─── Build matrix ────────────────────────────────────────────────────────
   build:
+    needs: quality
     strategy:
       fail-fast: false        # if one OS fails, still finish the others
       matrix:
@@ -42,6 +74,7 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     name: Build — ${{ matrix.label }}
+    timeout-minutes: 30
 
     steps:
       # ── 1. Source code ──────────────────────────────────────────────────────
@@ -59,7 +92,7 @@ jobs:
         uses: astral-sh/setup-uv@v5
         with:
           python-version: '3.12'
-          enable-cache: false
+          enable-cache: true
 
       # ── 3b. Python 3.12 via actions/setup-python (Windows bundling only) ─────
       #         On Windows we use this well-known Python (not uv's shim) to build

@@ -1,126 +1,214 @@
-# SrvOutbound: A Secure, Context-Aware Outbound Messaging Platform
+# CyberArc Outreach — AI-Powered B2B Email Outreach Platform
+
+[![CI](https://github.com/Srinivas26k/CyberArcMSP-Email/actions/workflows/ci.yml/badge.svg)](https://github.com/Srinivas26k/CyberArcMSP-Email/actions/workflows/ci.yml)
+[![Build](https://github.com/Srinivas26k/CyberArcMSP-Email/actions/workflows/build.yml/badge.svg)](https://github.com/Srinivas26k/CyberArcMSP-Email/actions/workflows/build.yml)
+[![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)](LICENSE)
+
+> **⚠️ PROPRIETARY SOFTWARE — All rights reserved.**
+> This repository is private. Cloning, forking, copying, or redistribution in any form is strictly prohibited without a valid paid license. See [LICENSE](LICENSE) for full terms.
 
 ## 1. Overview
 
-SrvOutbound is a commercial-grade desktop application designed for intelligent and secure outbound messaging. It moves beyond static configurations and developer-centric tools to offer a "Zero-Config" architecture that dynamically adapts to the user's professional identity. By leveraging a secure, encrypted local database and a high-speed semantic engine, SrvOutbound provides a personalized, secure, and efficient platform for B2B agencies, job seekers, and academics to manage their outreach campaigns.
+CyberArc Outreach is a self-contained **Electron + FastAPI** desktop application for intelligent, secure B2B email outreach. It combines a local encrypted database, multi-provider LLM email generation, Apollo.io lead enrichment, and multi-account SMTP dispatching into a single installable app — no cloud backend required.
 
-The core philosophy is to provide enterprise-level security and intelligence in a self-contained desktop environment, ensuring user data remains private and campaign content is always relevant.
+**Key principles:**
+- 🔒 **Zero-Config Security** — AES-256 encrypted SQLCipher vault, hardware-locked key derivation, no `.env` files
+- 🤖 **Multi-LLM Fallback** — Groq → OpenRouter → OpenAI → Anthropic → Gemini → Ollama Cloud with automatic failover
+- 📧 **Multi-Account Sending** — Round-robin, parallel, or batch strategies across unlimited SMTP/Resend accounts
+- 🔍 **Apollo.io Integration** — 2-step search (free) + bulk match (credits) for lead enrichment
+- 📊 **Real-Time Progress** — Server-Sent Events (SSE) for live campaign status in the UI
 
-## 2. Core Architecture
+## 2. Architecture
 
-The application is built on two foundational pillars: a secure, encrypted data core for storing sensitive information and a high-speed intelligence layer for dynamic content personalization.
+```
+┌─────────────────────────────────────────────────────────┐
+│  Electron Shell  (main.js / preload.js)                 │
+│  ├── Spawns Python backend on app start                 │
+│  └── Loads UI at http://127.0.0.1:PORT                  │
+├─────────────────────────────────────────────────────────┤
+│  FastAPI Backend  (app/)                                │
+│  ├── REST API (v1)  —  leads, campaigns, settings       │
+│  ├── SSE endpoint   —  real-time campaign progress      │
+│  ├── CampaignService — async batch send loop            │
+│  ├── LLM Client     — multi-provider email generation   │
+│  ├── Email Engine    — SMTP / Resend dispatcher         │
+│  └── SQLCipher Vault — encrypted settings & API keys    │
+├─────────────────────────────────────────────────────────┤
+│  SrvDB (srvdb/)     — semantic dedup & context search   │
+├─────────────────────────────────────────────────────────┤
+│  UI (ui/)           — vanilla HTML/CSS/JS SPA           │
+└─────────────────────────────────────────────────────────┘
+```
 
-### 2.1. Secure Data Architecture
+### 2.1. Secure Data Layer
 
-To guarantee data integrity and confidentiality, SrvOutbound implements a robust security model where the user's data is protected both at rest and in use.
+- **SQLCipher vault** (`vault.db`) stores API keys, email accounts, lead data — all AES-256 encrypted at rest
+- **Hardware-locked key** — encryption key derived from machine UUID; database is useless on another machine
+- **No `.env` files** — all secrets managed through the UI → vault pipeline
 
-*   **Encrypted Relational Core:** The application utilizes **SQLCipher** to maintain an AES-256 encrypted relational database (`vault.db`). All sensitive data, including API keys (e.g., Groq, Apollo, OpenRouter) and lead information, is stored within this encrypted vault.
+### 2.2. Intelligence Layer
 
-*   **Hardware-Locked Access:** The encryption key for the database is derived from the user’s local machine's unique identifier. This ensures that the database file is rendered inaccessible if moved to another machine, preventing unauthorized access or data leakage. This design eliminates the need for insecure `.env` files.
+- **SrvDB** — local semantic vector database for pitch-overlap detection and dynamic context injection
+- **Multi-provider LLM** — per-slot priority ordering with automatic fallback on failure
+- **Dynamic prompt generation** — persona-aware prompts with knowledge-base context injection
 
-### 2.2. High-Speed Intelligence Layer
+## 3. Features
 
-SrvOutbound integrates **SrvDB**, a high-performance, offline-first semantic database, to power its intelligence features. This allows for sophisticated content analysis and retrieval without reliance on external cloud services.
+| Feature | Description |
+|---|---|
+| **Campaign Engine** | Async batch sender with adaptive delay, auto-retry, and SSE progress |
+| **Craft & Preview** | Draft individual emails with LLM, preview before sending |
+| **Multi-Identity** | Switch between B2B agency and personal/job-seeker personas |
+| **Apollo Search** | Find leads by title, company, location with 1–100 employee range |
+| **Outbox & Timeline** | Full send history with sender tracking, 5 sort modes |
+| **Stuck-Lead Recovery** | Auto-resets "drafting" leads to "pending" on startup |
+| **Email Templates** | HTML-wrapped emails with dynamic content injection |
+| **Reply Detection** | IMAP-based reply checking across all sender accounts |
 
-*   **Semantic De-duplication:** To prevent message fatigue and maintain a positive sender reputation, SrvDB stores vector embeddings of all sent emails. Before initiating a new send, the system checks for "Pitch Overlap," identifying and flagging repetitive content destined for the same lead.
+### 3.1. Supported LLM Providers
 
-*   **Dynamic Context Injection:** The system replaces static content libraries with a dynamic "Knowledge Base" stored in SrvDB. When composing a message, the engine performs a similarity search to select the most relevant case studies, success stories, or project achievements based on the lead's profile (e.g., matching a "FinTech" case study to a "Banking" lead). This ensures maximum relevance and impact.
+| Provider | Format | Notes |
+|---|---|---|
+| Groq | OpenAI-compat | Fastest inference, recommended for primary slot |
+| OpenRouter | OpenAI-compat | Access to 100+ models |
+| OpenAI | Native | GPT-4o, GPT-4o-mini |
+| Anthropic | Messages API | Claude 3.5 Sonnet, Opus |
+| Google Gemini | OpenAI-compat | Gemini 1.5 Pro / Flash |
+| Ollama Cloud | Ollama API | Self-hosted models via Ollama |
 
-## 3. Key Features
+## 4. Tech Stack
 
-### 3.1. White-Label Personas
-
-The application supports multiple "Identity Modes," allowing users to tailor the platform to their specific needs. The active persona dictates the type of content and messaging style used in campaigns.
-
-*   **B2B Mode:** Tailored for agencies and businesses, this mode surfaces company profiles, service offerings, and professional case studies.
-*   **Personal Mode:** Designed for students and job seekers, this mode highlights personal portfolios, project achievements, and career objectives.
-
-### 3.2. Dynamic Prompt Generation
-
-The `CampaignService` dynamically constructs the LLM system prompt for each campaign. It achieves this by:
-1.  Retrieving the active user "Persona" from the encrypted database.
-2.  Performing a similarity search against the SrvDB "Knowledge Base" to inject the most relevant contextual information.
-3.  Combining these elements into a tailored prompt that guides the language model to generate highly personalized and effective content.
-
-## 4. Technical Implementation
-
-The backend is built with Python, following a modular and scalable service-oriented architecture.
-
-*   **Database Engine:** The standard `sqlite3` module is replaced with `sqlcipher3` to provide transparent, full-database encryption.
-*   **Semantic Engine:** A local SrvDB instance is deployed within the `app/data/` directory to handle all vector storage and similarity search operations.
-*   **Data Models:** The system uses SQLModel to define schemas for `IdentityProfile` and `KnowledgeBase`, replacing hardcoded configurations and enabling dynamic content management.
-*   **Security:** All calls to `os.getenv` for sensitive keys have been removed. A secure `KeyManager` fetches credentials directly from the encrypted `vault.db` at runtime.
-*   **Prompt Engineering:** The prompt generation logic is templatized to dynamically incorporate the user's selected identity and the context retrieved from SrvDB.
+| Layer | Technology |
+|---|---|
+| Desktop | Electron 29 + Bun |
+| Backend | Python 3.12, FastAPI, SQLModel, uvicorn |
+| Database | SQLCipher (AES-256), SrvDB (vectors) |
+| LLM | httpx async client, multi-provider |
+| Email | smtplib / Resend API, IMAP reply check |
+| Search | Apollo.io REST API |
+| Build | electron-builder (NSIS, AppImage, DMG) |
+| CI/CD | GitHub Actions (lint → test → build → release) |
+| Package mgr | uv (Python), Bun (Node) |
 
 ## 5. Getting Started
 
+> **Note:** You must have a valid license to use this software. Contact srinivasvarma764@gmail.com for licensing.
+
 ### 5.1. Prerequisites
 
-- Python 3.12 or higher
-- Pip (Python package installer)
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** — fast Python package manager
+- **[Bun](https://bun.sh/)** — JavaScript runtime (for Electron)
 
-### 5.2. Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-username/SrvOutbound.git
-    cd SrvOutbound
-    ```
-
-2.  **Create and activate a virtual environment:**
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate
-    ```
-
-3.  **Install the required dependencies:**
-    ```bash
-    pip install -e .
-    ```
-
-### 5.3. Running the Application
-
-To start the FastAPI server, run the following command:
+### 5.2. Install
 
 ```bash
-uvicorn app.main:app --reload
+# Python dependencies
+uv sync
+
+# Node / Electron dependencies
+bun install
 ```
 
-The application will be available at `http://127.0.0.1:8000`.
+### 5.3. Run (Development)
+
+**Option A — Backend only** (API at `http://127.0.0.1:8000`):
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+**Option B — Full desktop app** (Electron + backend):
+```bash
+bun run start
+```
+
+### 5.4. Build Installers
+
+```bash
+# Linux  → dist/*.AppImage + dist/*.deb
+bun run dist:linux
+
+# Windows → dist/*-Setup.exe + dist/*.zip
+bun run dist:win
+
+# macOS  → dist/*.dmg
+bun run dist:mac
+```
 
 ## 6. Project Structure
 
 ```
-├── app/
-│   ├── api/
-│   │   └── v1/
-│   │       ├── api.py
-│   │       └── controllers/
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── db.py
-│   │   └── sse.py
-│   ├── models/
-│   ├── repositories/
-│   ├── schemas/
-│   ├── services/
-│   └── utils/
-├── main.py
-├── pyproject.toml
-└── README.md
+├── app/                    # FastAPI backend
+│   ├── api/v1/             #   REST endpoints & controllers
+│   ├── core/               #   config, db, SSE, vault, state
+│   ├── models/             #   SQLModel table definitions
+│   ├── repositories/       #   data access layer
+│   ├── schemas/            #   Pydantic request/response schemas
+│   ├── services/           #   campaign, lead, sequence services
+│   └── utils/              #   LLM client, email engine, Apollo, prompts
+├── electron/               # Electron shell (main.js, preload.js)
+├── ui/                     # Frontend SPA
+│   ├── index.html          #   single-page HTML
+│   ├── css/                #   component & layout styles
+│   └── js/                 #   api, router, SSE, page modules
+├── srvdb/                  # Semantic vector database module
+├── scripts/                # Build helpers (download_uv, build_send)
+├── tests/                  # Pytest suite
+├── .github/workflows/      # CI (lint/test) + Build & Release
+├── package.json            # Electron/Bun config & build scripts
+├── pyproject.toml          # Python project metadata & deps
+├── LICENSE                 # Proprietary license — all rights reserved
+└── main.py                 # CLI entry point
 ```
 
-- **`app/`**: The main application directory.
-  - **`api/`**: Contains the API routing and controllers.
-    - **`v1/`**: Version 1 of the API.
-      - **`api.py`**: Defines the API endpoints.
-      - **`controllers/`**: Business logic for the API endpoints.
-  - **`core/`**: Core components like database connection, configuration, and server-sent events.
-  - **`models/`**: SQLModel definitions for the database tables.
-  - **`repositories/`**: Data access layer for interacting with the database.
-  - **`schemas/`**: Pydantic schemas for data validation and serialization.
-  - **`services/`**: Business logic services that orchestrate the application's features.
-  - **`utils/`**: Utility functions and helper modules.
-- **`main.py`**: The entry point for the FastAPI application.
-- **`pyproject.toml`**: Project metadata and dependencies.
-- **`README.md`**: This file.
+## 7. CI/CD
+
+The repository includes two GitHub Actions workflows:
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| **CI** (`ci.yml`) | Push to `master`, PRs | Ruff lint, pytest, type checking |
+| **Build & Release** (`build.yml`) | Version tags (`v*`), manual | Lint → test → build Win/Linux/macOS → GitHub Release |
+
+### Release Process
+
+```bash
+# 1. Bump version in package.json
+# 2. Commit and tag
+git tag v2.3.9
+git push origin v2.3.9
+# 3. GitHub Actions builds all platforms and creates a Release
+```
+
+## 8. Configuration
+
+All settings are managed through the **Settings** page in the UI:
+
+- **LLM Providers** — add API keys for up to 3 priority slots
+- **Email Accounts** — SMTP credentials (host, port, user, password)
+- **Apollo API Key** — for lead search & enrichment
+- **Email Defaults** — from name, subject prefix, signature
+
+Settings are encrypted and stored locally in the SQLCipher vault — never transmitted externally.
+
+## 9. Data Safety
+
+Your data lives in the **user-data folder**, not the install directory:
+
+| Platform | Path |
+|---|---|
+| Windows | `%APPDATA%\CyberArc Outreach\database.db` |
+| macOS | `~/Library/Application Support/CyberArc Outreach/database.db` |
+| Linux | `~/.config/CyberArc Outreach/database.db` |
+
+Upgrading the app never touches your leads, accounts, or settings. Use **Records → Download Full Database Backup** for extra safety.
+
+## 10. License
+
+**Proprietary — © 2024-2026 CyberArc MSP. All rights reserved.**
+
+This software is licensed under a **commercial proprietary license**. Unauthorized copying, cloning, forking, modification, distribution, or any form of redistribution is **strictly prohibited** and may result in civil and criminal penalties.
+
+See [LICENSE](LICENSE) for the full license agreement.
+
+For licensing inquiries: **cto.srinivas.nampalli@cyberarcmsp.com**

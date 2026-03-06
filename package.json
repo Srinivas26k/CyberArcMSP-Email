@@ -5,7 +5,7 @@
   "homepage": "https://cyberarcmsp.com",
   "main": "electron/main.js",
   "author": "Srinivas Nampalli <srinivasvarma764@gmail.com>",
-  "license": "UNLICENSED",
+  "license": "SEE LICENSE IN LICENSE",
   "private": true,
   "scripts": {
     "start": "electron .",
@@ -20,7 +20,7 @@
   "build": {
     "appId": "com.cyberarcmsp.outreach",
     "productName": "CyberArc Outreach",
-    "copyright": "© 2026 CyberArc MSP",
+    "copyright": "© 2024-2026 CyberArc MSP. All rights reserved.",
     "directories": {
       "buildResources": "build",
       "output": "dist"

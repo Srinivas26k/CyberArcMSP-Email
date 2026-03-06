@@ -3,7 +3,12 @@ name = "srv-ai-outreach"
 version = "2.0.0"
 description = "SRV AI Email Outreach — CyberArc MSP (FastAPI + SQLModel)"
 readme = "README.md"
+license = "LicenseRef-Proprietary"
 requires-python = ">=3.12"
+classifiers = [
+    "License :: Other/Proprietary License",
+    "Private :: Do Not Upload",
+]
 dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
