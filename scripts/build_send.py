@@ -483,10 +483,14 @@ def main() -> None:
     if not send_only:
         print("\n━━━  Uploading artifacts  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         artifacts = find_artifacts(platform)
-        if "win_installer"  in artifacts: installer_url = upload_file(artifacts["win_installer"])
-        if "win_zip"        in artifacts: zip_url       = upload_file(artifacts["win_zip"])
-        if "linux_appimage" in artifacts: appimage_url  = upload_file(artifacts["linux_appimage"])
-        if "linux_deb"      in artifacts: deb_url       = upload_file(artifacts["linux_deb"])
+        if "win_installer" in artifacts:
+            installer_url = upload_file(artifacts["win_installer"])
+        if "win_zip" in artifacts:
+            zip_url = upload_file(artifacts["win_zip"])
+        if "linux_appimage" in artifacts:
+            appimage_url = upload_file(artifacts["linux_appimage"])
+        if "linux_deb" in artifacts:
+            deb_url = upload_file(artifacts["linux_deb"])
     else:
         if not any([installer_url, zip_url, appimage_url, deb_url]):
             print("  --send-only requires at least one URL env var "

@@ -5,7 +5,6 @@ import asyncio
 import pytest
 from sqlmodel import Session, select
 from app.core.db import engine
-from app.core.vault import VaultManager
 from app.models.setting import Setting
 from app.models.identity import IdentityProfile, KnowledgeBase, get_srvdb_instance
 from app.utils.prompt import build_email_prompt
