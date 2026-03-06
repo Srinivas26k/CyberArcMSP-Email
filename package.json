@@ -10,7 +10,7 @@
   "scripts": {
     "start": "electron .",
     "dist:linux": "python3 scripts/download_uv.py linux && electron-builder --linux",
-    "dist:win": "python3 scripts/download_uv.py win32 && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
+    "dist:win": "python scripts/download_uv.py win32 && electron-builder --win",
     "dist:mac": "python3 scripts/download_uv.py darwin && electron-builder --mac"
   },
   "devDependencies": {

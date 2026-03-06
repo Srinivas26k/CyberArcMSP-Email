@@ -195,38 +195,52 @@ jobs:
       - name: Install Node dependencies
         run: bun install --frozen-lockfile
 
-      # ── 7. macOS: accept Xcode licence (needed by electron-builder) ──────────
+      # ── 7. Prepare bundled-uv directory ─────────────────────────────────────
+      #        Copy the uv binary already installed by setup-uv into bundled-uv/
+      #        so electron-builder can package it into extraResources.
+      - name: Prepare bundled-uv
+        shell: bash
+        run: |
+          mkdir -p bundled-uv
+          UV_PATH=$(which uv)
+          echo "Copying uv from: $UV_PATH"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cp "$UV_PATH" bundled-uv/uv.exe
+          else
+            cp "$UV_PATH" bundled-uv/uv
+            chmod +x bundled-uv/uv
+          fi
+          ls -lh bundled-uv/
+
+      # ── 8. macOS: accept Xcode licence (needed by electron-builder) ──────────
       - name: Accept Xcode licence
         if: matrix.platform == 'mac'
         run: sudo xcodebuild -license accept || true
 
-      # ── 8. Build ─────────────────────────────────────────────────────────────
+      # ── 9. Build ─────────────────────────────────────────────────────────────
       - name: Build (Windows)
         if: matrix.platform == 'win'
         shell: bash
-        run: bun run dist:win
+        run: npx electron-builder --win
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # No code-signing cert → skip it. Windows will show a SmartScreen
-          # warning on first run; users click "Run anyway".
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Build (Linux)
         if: matrix.platform == 'linux'
-        run: bun run dist:linux
+        run: npx electron-builder --linux
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build (macOS)
         if: matrix.platform == 'mac'
-        run: bun run dist:mac
+        run: npx electron-builder --mac
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Skip code-signing — users will right-click → Open on first run
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           APPLE_API_KEY_ID: ''
 
-      # ── 9. Upload artifact for the Release job ────────────────────────────────
+      # ── 10. Upload artifact for the Release job ───────────────────────────────
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
