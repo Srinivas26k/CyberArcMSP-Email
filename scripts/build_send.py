@@ -42,7 +42,7 @@ ENV_FILE = Path(__file__).resolve().parent / ".build_send.env"
 # ─── Recipients ───────────────────────────────────────────────────────────────
 RECIPIENTS = [
     "contact@cyberarcmsp.com",
-    "rajesh.viprala@cyberacmsp.com",
+    "rajesh.viprala@cyberarcmsp.com",
     "cto.srinivas.nampalli@cyberarcmsp.com",
 ]
 

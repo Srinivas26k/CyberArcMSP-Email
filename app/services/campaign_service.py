@@ -52,9 +52,11 @@ class CampaignService:
                 if account_ids:
                     accs = [a for a in accs if a.id in account_ids]
                     
+                account_list = [{"id": a.id, "email": a.email, "app_password": a.get_decrypted_password(),
+                                  "provider": a.provider, "display_name": a.display_name} for a in accs]
+                email_to_account_id = {a["email"]: a["id"] for a in account_list}
                 email_engine = EmailEngine(
-                    [{"id": a.id, "email": a.email, "app_password": a.get_decrypted_password(),
-                      "provider": a.provider, "display_name": a.display_name} for a in accs],
+                    account_list,
                     strategy=cfg.get("send_strategy", "round_robin"),
                     batch_size=int(cfg.get("batch_size", 5)),
                 )
@@ -62,25 +64,40 @@ class CampaignService:
             for i, lead_id in enumerate(lead_ids, 1):
                 if not running_flag_check():
                     break
-                    
+
+                # ── Adaptive delay BEFORE drafting the next lead ─────────
+                # (skip delay before the very first lead)
+                if i > 1:
+                    actual_delay = random.randint(60, 120) if delay <= 0 else delay
+                    await broadcast_cb("stat", {"message": f"Waiting {actual_delay}s before next send ({i-1}/{len(lead_ids)} done)..."})
+                    for _ in range(actual_delay):
+                        if not running_flag_check():
+                            break
+                        await asyncio.sleep(1)
+                    if not running_flag_check():
+                        break
+
                 await broadcast_cb("stat", {"message": f"Drafting email {i} of {len(lead_ids)}..."})
 
-                with Session(engine) as session:
-                    lead = session.get(Lead, lead_id)
-                    if not lead or lead.status != "pending":
-                        continue
-                    lead.status = "drafting"
-                    session.add(lead)
-                    session.commit()
-                
-                await broadcast_cb("lead_update", {"lead_id": lead_id, "status": "drafting"})
-
                 try:
+                    with Session(engine) as session:
+                        lead = session.get(Lead, lead_id)
+                        if not lead or lead.status != "pending":
+                            logger.info(f"Skipping lead {lead_id}: status={getattr(lead, 'status', 'not found')}")
+                            continue
+                        lead.status = "drafting"
+                        session.add(lead)
+                        session.commit()
+
+                    await broadcast_cb("lead_update", {"lead_id": lead_id, "status": "drafting"})
+
                     from app.models.identity import IdentityProfile, KnowledgeBase
                     from sqlmodel import select
                     
                     with Session(engine) as session:
                         lead = session.get(Lead, lead_id)
+                        if lead is None:
+                            raise RuntimeError(f"Lead {lead_id} not found in DB")
                         lead_data = CampaignService._lead_to_dict(lead)
 
                         # Load dynamic Identity from DB (set during onboarding)
@@ -102,9 +119,9 @@ class CampaignService:
                     # Dynamic prompt generation
                     _style = cfg.get("email_style_instructions", "")
                     _sample = cfg.get("sample_email_copy", "")
-                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, services, _style, _sample)
+                    sys_p_temp, usr_p_temp = build_email_prompt(lead_data, identity, list(services), _style, _sample)
                     sanitized_lead_data = PayloadSanitizer.truncate_context(lead_data, usr_p_temp, max_chars=4000)
-                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, services, _style, _sample)
+                    sys_p, usr_p = build_email_prompt(sanitized_lead_data, identity, list(services), _style, _sample)
                     
                     pkg = None
                     for attempt in range(2):
@@ -130,6 +147,8 @@ class CampaignService:
                         if attempt == 1:
                             raise PersonalizationError("422 Unprocessable Output: LLM failed to personalize the email with first name or company.")
                     
+                    assert pkg is not None, "Email generation produced no output"
+
                     # Fetch branding from Identity with fallbacks
                     sender_title = getattr(identity, 'sender_title', "Executive") or cfg.get("sender_title", "Executive")
                     calendar = getattr(identity, 'calendly_url', "") or cfg.get("calendar_url", "")
@@ -193,10 +212,14 @@ class CampaignService:
                         delay_seconds=0,
                     )
                     result = results[0]
+                    sent_from_email = result.get("sent_from", "")
+                    account_id_for_camp = email_to_account_id.get(sent_from_email)
 
                     with Session(engine) as session:
                         lead = session.get(Lead, lead_id)
                         camp = session.get(Campaign, campaign_id)
+                        if lead is None:
+                            raise RuntimeError(f"Lead {lead_id} disappeared from DB after send")
                         if result["success"]:
                             lead.status = "sent"
                             lead.lead_score = score_lead(lead_data)
@@ -204,6 +227,8 @@ class CampaignService:
                             lead.draft_body = pkg["bodyHtml"]
                             if camp:
                                 camp.sent_at = datetime.now(timezone.utc).isoformat()
+                                if account_id_for_camp:
+                                    camp.account_id = account_id_for_camp
                         else:
                             lead.status = "failed"
                             if camp:
@@ -229,17 +254,6 @@ class CampaignService:
                             session.commit()
                     await broadcast_cb("lead_update", {"lead_id": lead_id, "status": "failed",
                                                       "error": str(exc)[:200]})
-
-                # Adaptive Delay: Randomized delay between sends to mimic human behavior and avoid SMTP flagging
-                if i < len(lead_ids):
-                    actual_delay = random.randint(60, 120) if delay <= 0 else delay
-                    await broadcast_cb("stat", {"message": f"Adaptive Delay: Waiting {actual_delay}s before next send..."})
-                    
-                    # Sleep in 1-second chunks so we can interrupt immediately if stopped
-                    for _ in range(actual_delay):
-                        if not running_flag_check():
-                            break
-                        await asyncio.sleep(1)
 
         finally:
             await broadcast_cb("campaign_done", {"message": "Campaign finished"})

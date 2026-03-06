@@ -19,6 +19,7 @@ import json
 import logging
 import re
 import smtplib
+import time
 import urllib.request
 from email.header import decode_header
 from email.mime.multipart import MIMEMultipart
@@ -185,7 +186,7 @@ class SMTPAccount:
             imap.append(
                 drafts_folder,
                 r"\Draft",
-                imaplib.Time2Internaldate(None),
+                imaplib.Time2Internaldate(time.time()),
                 raw,
             )
 
@@ -241,12 +242,12 @@ class SMTPAccount:
                                 for p in msg.walk():
                                     if p.get_content_type() == "text/plain":
                                         payload = p.get_payload(decode=True)
-                                        if payload:
+                                        if isinstance(payload, bytes):
                                             body = payload.decode(errors="replace")[:500]
                                         break
                             else:
                                 payload = msg.get_payload(decode=True)
-                                if payload:
+                                if isinstance(payload, bytes):
                                     body = payload.decode(errors="replace")[:500]
 
                             # Parse sender name/email
@@ -302,7 +303,7 @@ class EmailEngine:
 
     # ── Internal: next account for round-robin ────────────────────────────────
 
-    async def _next_rr(self) -> SMTPAccount:
+    async def _next_rr(self) -> "SMTPAccount | ResendAccount":
         async with self._lock:
             acc = self.accounts[self._rr_index % len(self.accounts)]
             self._rr_index += 1
@@ -357,7 +358,7 @@ class EmailEngine:
         for i, job in enumerate(jobs):
             buckets[i % n].append(job)
 
-        async def _worker(account: SMTPAccount, batch: list) -> list:
+        async def _worker(account: "SMTPAccount | ResendAccount", batch: list) -> list:
             out = []
             for j in batch:
                 r = await self._dispatch_one(j, account)
@@ -398,7 +399,7 @@ class EmailEngine:
 
     # ── Core dispatcher ───────────────────────────────────────────────────────
 
-    async def _dispatch_one(self, job: dict, account: SMTPAccount) -> dict:
+    async def _dispatch_one(self, job: dict, account: "SMTPAccount | ResendAccount") -> dict:
         """Runs the blocking SMTP send in a thread pool."""
         lead_id = job.get("lead_id")
         # Inject sender details into the pre-generated HTML/plain templates
@@ -438,7 +439,7 @@ class EmailEngine:
         all_replies: list[dict] = []
         seen: set[str] = set()
         for result in nested:
-            if isinstance(result, Exception):
+            if isinstance(result, BaseException):
                 logger.warning(f"Reply check failed: {result}")
                 continue
             for r in result:

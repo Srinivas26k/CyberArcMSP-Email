@@ -44,6 +44,26 @@ def _migrate_legacy_db_if_needed():
 async def lifespan(app: FastAPI):
     _migrate_legacy_db_if_needed()
     db.init_db()
+
+    # ── Recover leads stuck in "drafting" state from a prior crash ─────────
+    # If the system was killed mid-campaign, some leads may have status="drafting"
+    # which prevents them from being picked up again.  Reset them to "pending".
+    try:
+        from sqlmodel import Session, select
+        from app.models.lead import Lead
+        with Session(db.engine) as session:
+            stuck = session.exec(
+                select(Lead).where(Lead.status == "drafting")
+            ).all()
+            if stuck:
+                for lead in stuck:
+                    lead.status = "pending"
+                    session.add(lead)
+                session.commit()
+                logger.info("♻️  Recovered %d stuck 'drafting' lead(s) → pending", len(stuck))
+    except Exception as exc:
+        logger.warning("Could not recover stuck leads: %s", exc)
+
     logger.info("✅ CA MSP AI Outreach started (Industrial Framework)")
 
     # Background task: process sequence follow-ups every 10 minutes

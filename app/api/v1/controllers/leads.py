@@ -7,7 +7,6 @@ from app.schemas.lead import LeadIn, ApolloQuery
 from app.services.lead_service import lead_service
 from app.utils.apollo_search import apollo_search as _apollo_search
 from app.utils.scoring import score_lead
-from app.core.config import settings
 from app.repositories.lead_repository import lead_repository
 import re
 
@@ -112,21 +111,34 @@ def _offices_to_str(offices) -> str:
 @router.get("/")
 def list_leads(session: Session = Depends(get_db_session)):
     from sqlmodel import desc
+    from app.models.email_account import EmailAccount
     leads = lead_repository.get_all(session)
-    # Fetch latest error + sent_at per lead from campaigns table
+    # Fetch latest error + sent_at + sent_from per lead from campaigns table
     all_campaigns = session.exec(select(Campaign).order_by(desc(Campaign.id))).all()
     error_map: dict = {}  # lead_id -> last error_message
     sent_map:  dict = {}  # lead_id -> last sent_at
+    sent_from_map: dict = {}  # lead_id -> sender email
+    account_ids_needed: set = set()
     for c in all_campaigns:
         if c.lead_id not in error_map:
             error_map[c.lead_id] = c.error_message or ""
         if c.lead_id not in sent_map:
             sent_map[c.lead_id] = c.sent_at or ""
+        if c.lead_id not in sent_from_map and c.account_id:
+            sent_from_map[c.lead_id] = c.account_id
+            account_ids_needed.add(c.account_id)
+    # Resolve account_id -> email in bulk
+    account_email_map: dict = {}
+    if account_ids_needed:
+        accs = session.exec(select(EmailAccount).where(EmailAccount.id.in_(account_ids_needed))).all()  # type: ignore[attr-defined]
+        account_email_map = {a.id: a.email for a in accs}
     res = []
     for lead in leads:
         d = _lead_to_dict(lead)
         d["last_error"] = error_map.get(lead.id, "")
         d["last_sent_at"] = sent_map.get(lead.id, "")
+        aid = sent_from_map.get(lead.id)
+        d["sent_from"] = account_email_map.get(aid, "") if aid else ""
         res.append(d)
     return {"leads": res, "total": len(res)}
 
@@ -210,6 +222,7 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
     """Generate an AI email draft for a single lead. Stores it in draft_subject / draft_body."""
     from app.utils.prompt import build_email_prompt
     from app.utils.llm_client import generate_email
+    from app.core.db import engine as db_engine
 
     lead = lead_repository.get(session, lead_id)
     if not lead:
@@ -223,29 +236,35 @@ async def preview_lead_email(lead_id: int, session: Session = Depends(get_db_ses
     if not any(p.get("api_key", "").strip() for p in providers):
         raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers, add a provider and click Save Settings.")
 
-    # Warn when using legacy keys (llm_providers never saved via new UI)
-    if cfg.get("_legacy_keys"):
-        import logging as _log
-        _log.getLogger(__name__).warning(
-            "Craft: using legacy groq_key/openrouter_key — user should save providers via Settings UI"
-        )
-
     lead_data = _lead_to_dict(lead)
+
+    # Detach from objects that depend on the session before calling the LLM
+    # (services is a Sequence from session — copy it)
+    services = list(services)
+
     sys_p, usr_p = build_email_prompt(
         lead_data, identity, services,
         cfg.get("email_style_instructions", ""),
         cfg.get("sample_email_copy", ""),
     )
 
+    # ── LLM call (async, can take 30-90s) ────────────────────────────────
+    # The injected session is NOT used across this await — SQLite doesn't
+    # support concurrent writes, so holding a session open during a long
+    # await blocks the DB for every other request (campaign sends, etc.).
     try:
         pkg = await generate_email(sys_p, usr_p, providers=providers)
     except RuntimeError as exc:
         raise HTTPException(400, str(exc))
 
-    lead.draft_subject = pkg["subject"]
-    lead.draft_body    = pkg["bodyHtml"]
-    session.add(lead)
-    session.commit()
+    # ── Save draft in a fresh short-lived session ────────────────────────
+    with Session(db_engine) as save_session:
+        fresh_lead = save_session.get(Lead, lead_id)
+        if fresh_lead:
+            fresh_lead.draft_subject = pkg["subject"]
+            fresh_lead.draft_body    = pkg["bodyHtml"]
+            save_session.add(fresh_lead)
+            save_session.commit()
 
     return {"subject": pkg["subject"], "body_html": pkg["bodyHtml"]}
 
@@ -323,24 +342,43 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     from app.utils.company import wrap_email_template, render_custom_template
     from app.utils.email_engine import EmailEngine
     from app.repositories.account_repository import account_repository
+    from app.core.db import engine as db_engine
     from datetime import datetime, timezone
 
+    # ── Phase 1: read everything we need from DB (fast, no await) ────────
     lead = lead_repository.get(session, lead_id)
     if not lead:
         raise HTTPException(404, "Lead not found")
 
     cfg = _load_cfg(session)
+    lead_data = _lead_to_dict(lead)
+    has_draft = bool(lead.draft_subject and lead.draft_body)
+    subject       = lead.draft_subject if has_draft else ""
+    body_html_raw = lead.draft_body    if has_draft else ""
+    lead_email    = lead.email
+    unsub_token   = lead.unsubscribe_token
 
-    # Use saved draft if available, otherwise generate fresh
-    if lead.draft_subject and lead.draft_body:
-        subject      = lead.draft_subject
-        body_html_raw = lead.draft_body
-    else:
+    identity, services = _get_identity_and_services(session)
+    services = list(services)
+
+    accs = account_repository.get_active_accounts(session)
+    if not accs:
+        raise HTTPException(400, "No active email accounts configured")
+    acc = accs[0]
+    acc_dict = {
+        "id": acc.id, "email": acc.email,
+        "app_password": acc.get_decrypted_password(),
+        "provider": acc.provider, "display_name": acc.display_name,
+    }
+    acc_email = acc.email
+    acc_display = acc.display_name or acc.email.split("@")[0].title()
+    acc_id = acc.id
+
+    # ── Phase 2: generate email if no draft (async, may take 30-90s) ─────
+    if not has_draft:
         providers = cfg.get("providers", [])
         if not any(p.get("api_key", "").strip() for p in providers):
             raise HTTPException(400, "No LLM API key configured. Go to Settings → LLM Providers and add your first provider.")
-        identity, services = _get_identity_and_services(session)
-        lead_data = _lead_to_dict(lead)
         sys_p, usr_p = build_email_prompt(
             lead_data, identity, services,
             cfg.get("email_style_instructions", ""),
@@ -353,28 +391,21 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
         subject       = pkg["subject"]
         body_html_raw = pkg["bodyHtml"]
 
-    # Pick first active account
-    accs = account_repository.get_active_accounts(session)
-    if not accs:
-        raise HTTPException(400, "No active email accounts configured")
-    acc = accs[0]
+    # ── Phase 3: pre-create Campaign for tracking (fresh session) ────────
+    with Session(db_engine) as s3:
+        pre_campaign = Campaign(lead_id=lead_id, subject=subject, sequence_step=0)
+        s3.add(pre_campaign)
+        s3.commit()
+        s3.refresh(pre_campaign)
+        tracking_url    = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
+        unsubscribe_url = f"http://127.0.0.1:8008/api/unsubscribe/{unsub_token}"
+        campaign_id     = pre_campaign.id
 
-    # Wrap in branded template (custom or default)
-    identity, _ = _get_identity_and_services(session)
-
-    # Pre-create Campaign to get tracking_id
-    pre_campaign = Campaign(lead_id=lead_id, subject=subject, sequence_step=0)
-    session.add(pre_campaign)
-    session.commit()
-    session.refresh(pre_campaign)
-    tracking_url    = f"http://127.0.0.1:8008/api/track/open/{pre_campaign.tracking_id}"
-    unsubscribe_url = f"http://127.0.0.1:8008/api/unsubscribe/{lead.unsubscribe_token}"
-    campaign_id     = pre_campaign.id
-
+    # ── Phase 4: wrap template + send (async, may take 10-30s) ───────────
     _tpl_ctx = dict(
         inner_html=body_html_raw,
-        sender_email=acc.email,
-        sender_name=acc.display_name or acc.email.split("@")[0].title(),
+        sender_email=acc_email,
+        sender_name=acc_display,
         sender_title=getattr(identity, "sender_title", "") or cfg.get("sender_title", "Executive"),
         calendly_url=getattr(identity, "calendly_url", "") or cfg.get("calendar_url", ""),
         company_name=getattr(identity, "name", "") or "",
@@ -390,29 +421,33 @@ async def send_single_lead(lead_id: int, session: Session = Depends(get_db_sessi
     plain = re.sub(r"<[^>]+>", " ", body_html_raw).strip()
 
     engine = EmailEngine(
-        [{"id": acc.id, "email": acc.email, "app_password": acc.get_decrypted_password(),
-          "provider": acc.provider, "display_name": acc.display_name}],
+        [acc_dict],
         strategy="round_robin",
     )
     results = await engine.send_batch(
-        jobs=[{"to": lead.email, "subject": subject, "html": html_body,
+        jobs=[{"to": lead_email, "subject": subject, "html": html_body,
                "plain": plain, "lead_id": lead_id}],
         delay_seconds=0,
     )
     result = results[0]
 
-    camp = session.get(Campaign, campaign_id)
-    lead.status = "sent" if result["success"] else "failed"
-    lead.lead_score = score_lead(_lead_to_dict(lead))
-    if camp:
-        if result["success"]:
-            camp.sent_at = datetime.now(timezone.utc).isoformat()
-        else:
-            camp.error_message = result.get("error", "")
-            camp.sent_at = datetime.now(timezone.utc).isoformat()
-        session.add(camp)
-    session.add(lead)
-    session.commit()
+    # ── Phase 5: update DB with result (fresh session, fast) ─────────────
+    with Session(db_engine) as s5:
+        lead_obj = s5.get(Lead, lead_id)
+        camp = s5.get(Campaign, campaign_id)
+        if lead_obj:
+            lead_obj.status = "sent" if result["success"] else "failed"
+            lead_obj.lead_score = score_lead(lead_data)
+            s5.add(lead_obj)
+        if camp:
+            camp.account_id = acc_id
+            if result["success"]:
+                camp.sent_at = datetime.now(timezone.utc).isoformat()
+            else:
+                camp.error_message = result.get("error", "")
+                camp.sent_at = datetime.now(timezone.utc).isoformat()
+            s5.add(camp)
+        s5.commit()
 
     if result["success"]:
         return {"status": "sent", "sent_from": result.get("sent_from", "")}

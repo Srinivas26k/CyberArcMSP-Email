@@ -13,7 +13,6 @@ runs, so the binary is ready to be copied into extraResources.
 """
 
 import json
-import os
 import stat
 import sys
 import tarfile

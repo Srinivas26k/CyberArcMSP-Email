@@ -113,7 +113,7 @@ async function loadOutbox() {
             <th style="width:32px;"><input type="checkbox" id="outbox-select-all-hdr"></th>
             <th style="width:20px;"></th>
             <th style="width:100px;"></th>
-            <th>Email</th><th>Company</th><th>Role</th><th>Status</th>
+            <th>Email</th><th>Company</th><th>Role</th><th>Sent From</th><th>Status</th>
           </tr></thead>
           <tbody id="outbox-tbody">
             ${leads.map((l) => {
@@ -130,6 +130,7 @@ async function loadOutbox() {
                 <td>${esc(l.email)}</td>
                 <td>${esc(l.company || '\u2014')}</td>
                 <td class="td--muted">${esc(l.role || '\u2014')}</td>
+                <td class="td--muted" style="font-size:0.78rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${esc(l.sent_from || '')}">${l.sent_from ? esc(l.sent_from) : '\u2014'}</td>
                 <td>
                   <span class="status-badge ${esc(l.status)}"${errTip}>${esc(l.status)}</span>
                   ${isFailed && l.last_error ? `<div style="font-size:10px;color:#be123c;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;" title="${esc(l.last_error)}">${esc(l.last_error.substring(0, 60))}${l.last_error.length > 60 ? '…' : ''}</div>` : ''}

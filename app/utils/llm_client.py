@@ -56,6 +56,11 @@ PROVIDER_DEFS: dict[str, dict] = {
         "default_model": "claude-3-5-haiku-20241022",
         "format":        "anthropic",   # different request/response shape
     },
+    "ollama": {
+        "base_url":      "https://ollama.com",
+        "default_model": "qwen3:32b",
+        "format":        "ollama",   # Ollama Cloud API — uses /api/chat
+    },
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -86,11 +91,84 @@ _rate_limiters: dict[str, _RateLimiter] = {
     "openai":     _RateLimiter(rpm=40),
     "gemini":     _RateLimiter(rpm=15),
     "anthropic":  _RateLimiter(rpm=15),
+    "ollama":     _RateLimiter(rpm=15),
 }
 
 _provider_sems: dict[str, asyncio.Semaphore] = {
     k: asyncio.Semaphore(1) for k in PROVIDER_DEFS
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OLLAMA CLOUD CALLER  (uses /api/chat — not OpenAI-compatible)
+# ─────────────────────────────────────────────────────────────────────────────
+
+async def _call_ollama_cloud(
+    system: str,
+    user: str,
+    api_key: str,
+    model: str,
+    limiter: _RateLimiter | None = None,
+    sem: asyncio.Semaphore | None = None,
+) -> Optional[str]:
+    """Call Ollama Cloud API at https://ollama.com/api/chat.
+
+    Strategy:
+      1st attempt — include ``"format": "json"`` so the model returns clean JSON.
+      If the server replies with 500 (some models don't support forced JSON mode),
+      retry WITHOUT the format parameter and let ``_extract_json`` handle parsing.
+    """
+    sem = sem or asyncio.Semaphore(1)
+    use_json_format = True          # try with format first
+
+    for attempt in range(3):
+        async with sem:
+            if limiter:
+                await limiter.acquire()
+            try:
+                body: dict = {
+                    "model":    model,
+                    "messages": [
+                        {"role": "system", "content": system},
+                        {"role": "user",   "content": user},
+                    ],
+                    "stream": False,
+                }
+                if use_json_format:
+                    body["format"] = "json"
+
+                async with httpx.AsyncClient(timeout=90) as client:
+                    r = await client.post(
+                        "https://ollama.com/api/chat",
+                        headers={
+                            "Authorization": f"Bearer {api_key}",
+                            "Content-Type":  "application/json",
+                        },
+                        json=body,
+                    )
+                if r.status_code == 429:
+                    wait = 2 ** attempt * 2
+                    logger.warning(f"429 on Ollama Cloud {model}, sleeping {wait:.1f}s")
+                    await asyncio.sleep(wait)
+                    continue
+                if r.status_code == 500 and use_json_format:
+                    # Model likely doesn't support forced JSON — retry without it
+                    logger.info(f"Ollama Cloud 500 with format=json on {model}, retrying without format constraint")
+                    use_json_format = False
+                    continue
+                if r.status_code == 200:
+                    content = r.json().get("message", {}).get("content", "")
+                    logger.info(f"Ollama Cloud success via {model}")
+                    return content
+                logger.warning(f"Ollama Cloud {r.status_code} on {model}: {r.text[:200]}")
+                return None
+            except httpx.TimeoutException:
+                logger.warning(f"Timeout on Ollama Cloud {model}, attempt {attempt + 1}")
+                await asyncio.sleep(2 ** attempt)
+            except Exception as exc:
+                logger.warning(f"Ollama Cloud error on {model}: {exc}")
+                await asyncio.sleep(2 ** attempt)
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -324,7 +402,9 @@ async def generate_email(
 
         logger.info(f"Trying provider: {pname} / {model}")
 
-        if pdef["format"] == "anthropic":
+        if pdef["format"] == "ollama":
+            raw = await _call_ollama_cloud(system_prompt, user_prompt, api_key, model, limiter, sem)
+        elif pdef["format"] == "anthropic":
             raw = await _call_anthropic(system_prompt, user_prompt, api_key, model, limiter, sem)
         else:
             raw = await _call_openai_compat(

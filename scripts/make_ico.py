@@ -113,7 +113,7 @@ def main() -> None:
 
     # ── Copy favicon.ico to ui/ for the browser <link rel=icon> ─────────────
     shutil.copy2(ICO_OUT, ROOT / "ui" / "favicon.ico")
-    print(f"  ui/favicon  : copied")
+    print("  ui/favicon  : copied")
 
     print("\n✅  All icon assets generated successfully.")
     print(f"   Embedded ICO sizes : {', '.join(str(s)+'×'+str(s) for s in SIZES)}")

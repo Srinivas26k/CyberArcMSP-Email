@@ -1,14 +1,11 @@
-import os
 import asyncio
-from dotenv import load_dotenv
 from sqlmodel import Session, select
 from app.core.db import engine, init_db
 from app.models.setting import Setting
-from app.models.identity import IdentityProfile, KnowledgeBase, get_srvdb_instance
+from app.models.identity import IdentityProfile, KnowledgeBase
 from app.utils.prompt import build_email_prompt
 from app.utils.llm_client import generate_email
 from app.utils.company import wrap_email_template
-from app.core.vault import VaultManager
 
 # Ensure DB forms and PBKDF2 vault derivations are pre-heated
 init_db()

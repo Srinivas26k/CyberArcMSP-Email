@@ -16,6 +16,7 @@ const LLM_PROVIDERS = [
   { value: 'openai',     label: 'OpenAI',        ph: 'sk-proj-…',  hint: 'platform.openai.com/api-keys' },
   { value: 'anthropic',  label: 'Anthropic',     ph: 'sk-ant-…',   hint: 'console.anthropic.com' },
   { value: 'gemini',     label: 'Google Gemini', ph: 'AIzaSy…',    hint: 'aistudio.google.com' },
+  { value: 'ollama',     label: 'Ollama Cloud',  ph: 'your_api_key', hint: 'ollama.com/settings/keys' },
 ];
 
 const MAX_SLOTS = 5;
